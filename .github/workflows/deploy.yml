@@ -28,7 +28,7 @@ jobs:
         mamba-version: '*'
         activate-environment: cworthy
         auto-update-conda: false
-        python-version: 3.8
+        python-version: 3.12
         use-only-tar-bz2: true
 
     - name: Set up conda environment
