@@ -481,18 +481,21 @@ def create_hr_4p2z_clone(
     )
 
 
-def case_status(vintage=None, path_cases=None):
+def case_status(vintage=None, caselist=None, path_cases=None):
     """look at all CaseStatus files and extract information"""
 
     if path_cases is None:
         path_cases = paths["cases"]
 
     caseroots = sorted(glob(f"{path_cases}/*"))
-
+        
     if vintage is not None:
         n = len(vintage) + 1
         caseroots = [c for c in caseroots if c[-n:] == f".{vintage}"]
 
+    if caselist is not None:
+        caseroots = [c for c in caseroots if os.path.basename(c) in caselist]
+        
     rows = []
     df_caseinfo = None
 

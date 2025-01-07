@@ -134,22 +134,22 @@ def building_jobids():
 
 def queue_info():
     """return a dictionary with a key for case name and value of JobId"""
-    JobIds = running_jobids()
+    stdout = (
+        check_output("squeue -u ${USER} --Format=JobID:10,State:10,Name:256", shell=True)
+        .decode("utf-8")
+        .strip()
+        .split("\n")
+    )
+    info_list = [
+        {"JobId": s.split()[0], "JobState": s.split()[1], "JobName": s.split()[2]}
+        for s in stdout[1:]
+    ]
+
     info = {}
-    for JobId in JobIds:
-        stdout = (
-            check_output(f"scontrol show JobId={JobId}", shell=True)
-            .decode("utf-8")
-            .strip()
-            .replace("\n", "")
-        )
-        case = [
-            s.split("=")[1].replace("run.", "")
-            for s in stdout.split(" ")
-            if "JobName" in s
-        ][0]
-        JobState = [s.split("=")[1] for s in stdout.split(" ") if "JobState" in s][0]
-        info[case] = {"JobId": JobId, "JobState": JobState}
+    for d in info_list:
+        if d["JobName"][:4] == "run.":
+            case = d["JobName"].replace("run.", "")
+            info[case] = d
     return info
 
 

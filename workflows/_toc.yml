@@ -4,15 +4,15 @@ parts:
 - caption: Stage Data
   chapters:
   - file: 01-stage-data
-- caption: Global DOR Efficiency
+- caption: Global Efficiency Maps
   chapters:
-  - file: dor-workflows
+  - file: workflows
     sections:
     - file: 02-atlas-global-irf-map
-  - file: dor-validation
+  - file: validation
     sections:
     - glob: output/validation/*
-  - file: dor-analysis
+  - file: analysis
     sections:    
     - glob: output/analysis/*
       

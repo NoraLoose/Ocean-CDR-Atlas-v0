@@ -211,6 +211,7 @@ class global_irf_map(object):
         self.time_reference = xr.cftime_range(
             "0306-01-01", "0368-12-31", freq="ME", calendar="noleap"
         )
+        self._df_case_status = None
         self.df_validation = None
         self.set_experiments()
 
@@ -304,6 +305,15 @@ class global_irf_map(object):
     def build(self, phase, run_local=False, clobber=False, clobber_list=[]):
         """build cases in SLURM script"""
 
+        building_jobs = machine.building_jobids()
+        if building_jobs:
+            print(f"waiting on {len(building_jobs)} build(s)")        
+        
+        while building_jobs:
+            building_jobs = machine.building_jobids()
+            print("...", end="")
+            time.sleep(30)
+        
         # build a subset or all
         if phase == "reproduce-reference":
             df_build = self.df.loc[self.cases[0] : self.cases[0]]
@@ -317,17 +327,19 @@ class global_irf_map(object):
         else:
             raise ValueError("phase unrecognized")
 
+        self._refresh_case_status()
+        df_case_status = self.df_case_status
+        
         for case, caseinfo in df_build.iterrows():
 
             built = False
-            if self.df_case_status is not None:
-                if case in self.df_case_status.index:
+            if df_case_status is not None:
+                if case in df_case_status.index:
                     if clobber or case in clobber_list:
                         self.clobber_case(case)
-                        built = False
                     else:
-                        built = self.df_case_status.loc[case].build
-                
+                        built = df_case_status.loc[case].build
+            
             if not built:
                 build_script = submit_build(
                     blueprint=caseinfo["blueprint"],
@@ -353,6 +365,8 @@ class global_irf_map(object):
             building_jobs = machine.building_jobids()
             print("...", end="")
             time.sleep(30)
+
+        self._refresh_case_status()            
 
         caselist = self.df_case_status.loc[
             (self.df_case_status.build)
@@ -391,6 +405,8 @@ class global_irf_map(object):
     def validate(self, clobber=False):
         """validate the model integrations"""
 
+        self._refresh_case_status()        
+        
         caselist = self.df_case_status.loc[
             (self.df_case_status.archive)
         ].index.to_list()
@@ -431,7 +447,7 @@ class global_irf_map(object):
 
     def analyze(self, clobber=False):
         """perform analysis and generate output datasets"""
-
+       
         caselist = self.df_case_status.loc[
             (self.df_case_status.archive)
         ].index.to_list()
@@ -460,6 +476,8 @@ class global_irf_map(object):
 
     def visualize(self, clobber=False):
         """run visualization notebooks"""
+        
+        self._refresh_case_status()
         
         caselist = self.df_case_status.loc[
             (self.df_case_status.archive)
@@ -500,8 +518,19 @@ class global_irf_map(object):
     
     @property
     def df_case_status(self):
-        return cesm.case_status(self.vintage)
-
+        """
+        Return DataFrame with case status info
+        """
+        if self._df_case_status is None:
+            self._refresh_case_status()        
+        return self._df_case_status
+    
+    def _refresh_case_status(self):
+        """
+        Populate case status DataFrame
+        """
+        self._df_case_status = cesm.case_status(self.vintage, caselist=self.df.index.to_list())
+            
     def _path_reference_timeseries(self, variable):
         """
         return path to timeseries data — replace with data catalog API

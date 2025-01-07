@@ -1,0 +1,32 @@
+Unloading the cpe module is insufficient to restore the system defaults.
+Please run 'source
+/opt/cray/pe/cpe/23.12/restore_lmod_system_defaults.[csh|sh]'. 
+Running "module reset". Resetting modules to system default. The following $MODULEPATH directories have been removed: /opt/cray/pe/lmod/modulefiles/mpi/gnu/12.0/ofi/1.0/cray-mpich/8.0
+================================================================================
+BUILDING
+smyle
+smyle.cdr-atlas-v0.glb-dor_Southern_Ocean_024_1999-04-01_02697.001
+{"cdr_forcing": "dor", "cdr_forcing_file": "/global/cfs/projectdirs/m4746/Projects/OAE-Efficiency-Map/data/alk-forcing/OAE-Efficiency-Map/alk-forcing-Southern_Ocean.024-1999-04.nc", "refdate": "0347-04-01", "stop_n": 15, "wallclock": "10:00:00", "curtail_output": true}
+================================================================================
+
+Traceback (most recent call last):
+  File "/global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/atlas.py", line 773, in <module>
+    main()
+  File "/global/homes/m/mattlong/.conda/envs/cworthy/lib/python3.12/site-packages/click/core.py", line 1157, in __call__
+    return self.main(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/homes/m/mattlong/.conda/envs/cworthy/lib/python3.12/site-packages/click/core.py", line 1078, in main
+    rv = self.invoke(ctx)
+         ^^^^^^^^^^^^^^^^
+  File "/global/homes/m/mattlong/.conda/envs/cworthy/lib/python3.12/site-packages/click/core.py", line 1434, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/homes/m/mattlong/.conda/envs/cworthy/lib/python3.12/site-packages/click/core.py", line 783, in invoke
+    return __callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/atlas.py", line 769, in main
+    gen_case(case, clobber=clobber, **kwargs)
+  File "/global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/cesm.py", line 42, in create_smyle_clone
+    assert cdr_forcing in ["OAE", "DOR"], f"Unknown CDR forcing: {cdr_forcing}"
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Unknown CDR forcing: dor
