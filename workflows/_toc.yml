@@ -8,7 +8,8 @@ parts:
   chapters:
   - file: workflows
     sections:
-    - file: 02-atlas-global-irf-map
+    - file: 02-atlas-global-irf-map-build-run
+    - file: 03-atlas-global-irf-map-validate-analyze
   - file: validation
     sections:
     - glob: output/validation/*

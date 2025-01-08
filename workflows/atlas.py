@@ -402,7 +402,7 @@ class global_irf_map(object):
         for key, path in self.paths_case(case).items():
             check_call(["rm", "-fr", path])
     
-    def validate(self, clobber=False):
+    def validate(self, clobber=False, n=None):
         """validate the model integrations"""
 
         self._refresh_case_status()        
@@ -410,6 +410,9 @@ class global_irf_map(object):
         caselist = self.df_case_status.loc[
             (self.df_case_status.archive)
         ].index.to_list()
+        
+        if n is not None:
+            caselist = caselist[:n]
 
         zarr_stores_exist = [
             os.path.exists(self.paths_case(case)["validate"]) for case in caselist
@@ -445,13 +448,16 @@ class global_irf_map(object):
             self.dask_cluster.shutdown()
             self.dask_cluster = None            
 
-    def analyze(self, clobber=False):
+    def analyze(self, clobber=False, n=None):
         """perform analysis and generate output datasets"""
        
         caselist = self.df_case_status.loc[
             (self.df_case_status.archive)
         ].index.to_list()
 
+        if n is not None:
+            caselist = caselist[:n]        
+        
         zarr_stores_exist = [
             os.path.exists(self.paths_case(case)["analyze"]) for case in caselist
         ]
