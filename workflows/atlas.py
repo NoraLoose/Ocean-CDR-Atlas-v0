@@ -214,7 +214,6 @@ class global_irf_map(object):
         self._df_case_status = None
         self.df_validation = None
         self.set_experiments()
-        print("shit.")
 
     def set_experiments(self):
         # forcing specification
