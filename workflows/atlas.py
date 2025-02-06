@@ -214,6 +214,7 @@ class global_irf_map(object):
         self._df_case_status = None
         self.df_validation = None
         self.set_experiments()
+        print("shit.")
 
     def set_experiments(self):
         # forcing specification
@@ -254,6 +255,7 @@ class global_irf_map(object):
             dict(
                 blueprint=self.blueprint,
                 polygon=None,
+                polygon_master=None,
                 basin=None,
                 start_date=start_dates[0],
                 cdr_forcing=None,
@@ -269,10 +271,13 @@ class global_irf_map(object):
 
         # define cases
         index = 0
+        polygon_master_index = -1
         for b in basins:
             n = npolygon[b]
 
             for p in range(0, n):
+                polygon_master_index += 1
+                
                 for i, d in enumerate(start_dates):
 
                     file = f"{cdr_forcing_path}/alk-forcing-{b}.{p:03d}-{d}.nc"
@@ -286,6 +291,7 @@ class global_irf_map(object):
                         dict(
                             blueprint=self.blueprint,
                             polygon=p,
+                            polygon_master=polygon_master_index,
                             basin=b,
                             start_date=d,
                             cdr_forcing=self.cdr_forcing,
