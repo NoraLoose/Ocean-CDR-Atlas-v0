@@ -2,6 +2,7 @@ import os
 from subprocess import check_call
 from glob import glob
 
+import uuid
 import time
 
 import json
@@ -54,6 +55,83 @@ def get_cftime(ds):
             calendar=ds.time.calendar,
         ),
     )
+
+
+def submit_bundle(cases, n_bundle=100, nodes_per_case=7):
+    """submit a bundle of cases"""
+    
+    submit_out_root = f"{scriptroot}/output/bundle-out"
+    os.makedirs(submit_out_root, exist_ok=True)
+
+    queue_job_root = f"{scriptroot}/output/bundled-jobs-caselists"
+    os.makedirs(queue_job_root, exist_ok=True)
+
+    n_nodes = n_bundle * nodes_per_case
+   
+    header = lambda jobname: textwrap.dedent(
+        f"""\
+        #!/bin/bash    
+        #SBATCH --job-name bundle.{jobname}
+        #SBATCH --account {account}
+        #SBATCH --qos=regular
+        #SBATCH --nodes={n_nodes}
+        #SBATCH --ntasks-per-node=128
+        #SBATCH --time=10:00:00
+        #SBATCH --exclusive
+        #SBATCH --constraint=cpu
+        
+        module load python
+        
+        """
+    )
+    
+    bundle_id = str(uuid.uuid4()) 
+    script = [header(bundle_id)]
+    
+    submitted = []
+    submit_batch = []
+    for n, case in enumerate(cases):
+
+        # append to the script
+        script.append(
+            textwrap.dedent(
+                f"""
+            cd {paths['cases']}/{case}
+            ./case.submit --no-batch &> {submit_out_root}/{case}.submit &
+            
+            """
+            )
+        )
+        submit_batch.append(case)
+
+        # write casename to file with jobname id so we can know which
+        # cases are in this bundle by querying the queue
+        with open(f"{queue_job_root}/{bundle_id}.caselist", "a") as fid:
+            fid.write(f"{case}\n")
+        
+        if (len(script) - 1 == n_bundle) or n + 1 == len(cases):
+            script.append("wait")
+           
+            bundle_submit = f"bundle.{bundle_id}.submit"
+            with open(f"output/{bundle_submit}", "w") as fid:
+                fid.writelines(script)
+           
+            # submit the bundle to the queue
+            check_call(
+                f"sbatch {bundle_submit} > {bundle_submit}.out",
+                shell=True,
+                cwd=f"{scriptroot}/output",
+            )
+
+            # reset to begin again
+            submitted.extend(submit_batch)            
+            bundle_id = str(uuid.uuid4()) 
+            script = [header(bundle_id)]            
+            submit_batch = []            
+
+    assert len(submitted) == len(cases) and sorted(submitted) == sorted(
+        cases
+    ), "Not all cases were submitted"
 
 
 def submit_cases(cases, n_simult=10):
@@ -359,7 +437,7 @@ class global_irf_map(object):
                     run_local=run_local,
                 )
 
-    def compute(self):
+    def compute(self, n_bundle=0):
         """perform the computation"""
 
         building_jobs = machine.building_jobids()
@@ -375,12 +453,15 @@ class global_irf_map(object):
 
         caselist = self.df_case_status.loc[
             (self.df_case_status.build)
-            & ~(self.df_case_status.submitted)            
-            & ~(self.df_case_status.run_completed)
+            & ~(self.df_case_status.archive)
             & ~(self.df_case_status.Queued)
         ].index.to_list()
 
-        submit_cases(caselist)
+        if n_bundle == 0:
+            submit_cases(caselist)
+        else:
+            submit_bundle(caselist, n_bundle=n_bundle, nodes_per_case=7)
+            
         return len(caselist)
 
     def check_cases(self):
