@@ -5,6 +5,8 @@ from glob import glob
 import uuid
 import time
 
+import tqdm
+
 import json
 import textwrap
 
@@ -509,11 +511,7 @@ class global_irf_map(object):
             self.dask_cluster = machine.dask_cluster()
 
         rows = []
-        for case in caselist:
-
-            print("=" * 80)
-            print(case, end="\n")
-
+        for case in tqdm.auto(caselist):
             ds_out = self._validate_case(case, clobber)
 
             if ds_out is None:
@@ -553,11 +551,9 @@ class global_irf_map(object):
             self.dask_cluster = machine.dask_cluster()
 
         paths = []
-        for case in caselist:
+        for case in tqdm.auto(caselist):
             if "control" in case:
                 continue
-            print("=" * 80)
-            print(case, end="\n")
             paths.append(self._analyze_case(case, clobber))
 
         if self.dask_cluster is not None:
@@ -776,12 +772,8 @@ class global_irf_map(object):
                         ds_out[f"{v_case}_diff"].data = (
                             ds[v_case] - ds_ref[v_ref]
                         ).isel(**isel_slab)
-            print()
-
-            print(f"computing {zarr_store}")
             ds_out = ds_out.compute()
 
-            print(f"writing {zarr_store}")
             ds_out.to_zarr(
                 zarr_store,
                 mode="w",
@@ -798,11 +790,7 @@ class global_irf_map(object):
             return zarr_store
 
         ds = analysis.open_gx1v7_dataset(case, stream="pop.h")
-
-        print(f"computing {zarr_store}")
         ds_out = analysis.reduction(ds).compute()
-
-        print(f"writing {zarr_store}")
         ds_out.to_zarr(
             zarr_store,
             mode="w",
