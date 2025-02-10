@@ -5,7 +5,7 @@ from glob import glob
 import uuid
 import time
 
-import tqdm
+from tqdm.notebook import tqdm
 
 import json
 import textwrap
@@ -511,7 +511,7 @@ class global_irf_map(object):
             self.dask_cluster = machine.dask_cluster()
 
         rows = []
-        for case in tqdm.auto(caselist):
+        for case in tqdm(caselist):
             ds_out = self._validate_case(case, clobber)
 
             if ds_out is None:
@@ -551,7 +551,7 @@ class global_irf_map(object):
             self.dask_cluster = machine.dask_cluster()
 
         paths = []
-        for case in tqdm.auto(caselist):
+        for case in tqdm(caselist):
             if "control" in case:
                 continue
             paths.append(self._analyze_case(case, clobber))
@@ -720,8 +720,6 @@ class global_irf_map(object):
                 if v_case not in ds:
                     print(f"{v_case} not found", end=", ")
                     continue
-
-                print(v_case, end=", ")
 
                 with xr.open_dataset(
                     self._path_reference_timeseries(v_ref),
