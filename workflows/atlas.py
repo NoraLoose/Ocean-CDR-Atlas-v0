@@ -293,6 +293,7 @@ class global_irf_map(object):
         )
         self._df_case_status = None
         self.df_validation = None
+        self.df_analysis = None
         self.set_experiments()
 
     def set_experiments(self):
@@ -387,7 +388,7 @@ class global_irf_map(object):
         self.df = pd.DataFrame(rows).set_index("case")
         self.cases = self.df.index.to_list()
 
-    def build(self, phase, run_local=False, clobber=False, clobber_list=[]):
+    def build(self, phase, run_local=False, clobber=False, clobber_list=[], just_these_cases=[]):
         """build cases in SLURM script"""
 
         building_jobs = machine.building_jobids()
@@ -417,6 +418,10 @@ class global_irf_map(object):
         
         for case, caseinfo in df_build.iterrows():
 
+            if just_these_cases:
+                if case not in just_these_cases:
+                    continue        
+            
             built = False
             if df_case_status is not None:
                 if case in df_case_status.index:
@@ -439,7 +444,7 @@ class global_irf_map(object):
                     run_local=run_local,
                 )
 
-    def compute(self, n_bundle=0):
+    def compute(self, n_bundle=0, just_these_cases=[]):
         """perform the computation"""
 
         building_jobs = machine.building_jobids()
@@ -459,6 +464,11 @@ class global_irf_map(object):
             & ~(self.df_case_status.Queued)
         ].index.to_list()
 
+        if just_these_cases:
+            for case in just_these_cases:
+                assert case in caselist, f"{case} is not in the list"
+            caselist = just_these_cases
+        
         if n_bundle == 0:
             submit_cases(caselist)
         else:
@@ -539,6 +549,8 @@ class global_irf_map(object):
             (self.df_case_status.archive)
         ].index.to_list()
 
+        caselist = list(filter(lambda c: self.df.loc[c].cdr_forcing is not None, caselist))
+        
         if n is not None:
             caselist = caselist[:n]        
         
@@ -550,17 +562,21 @@ class global_irf_map(object):
         if not all(zarr_stores_exist) or clobber:
             self.dask_cluster = machine.dask_cluster()
 
-        paths = []
+        rows = []
         for case in tqdm(caselist):
             if "control" in case:
                 continue
-            paths.append(self._analyze_case(case, clobber))
+            zarr_path = self._analyze_case(case, clobber)
+            rows.append(
+                dict(case=case, zarr_path=zarr_path)
+            )
 
+        self.df_analysis = pd.DataFrame(rows).set_index("case")
+        
         if self.dask_cluster is not None:
             self.dask_cluster.shutdown()
             self.dask_cluster = None
 
-        return paths
 
     def visualize(self, clobber=False):
         """run visualization notebooks"""
@@ -727,7 +743,7 @@ class global_irf_map(object):
                     chunks=chunk_spec,
                 ) as ds_ref:
                     assert len(ds_ref.time) == len(
-                        self.time_reference
+                        self.time_referenceq
                     ), "mismatch in control run time axis"
 
                     # pluck time segment
