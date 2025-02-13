@@ -226,7 +226,7 @@ def create_smyle_clone(
 
     # namelist
     user_nl = dict()
-    
+
     print(cdr_forcing)
     if cdr_forcing is None:
         lalk_forcing_apply_file_flux = ".false."
@@ -237,7 +237,7 @@ def create_smyle_clone(
     elif cdr_forcing == "OAE":
         lalk_forcing_apply_file_flux = ".true."
         ldic_forcing_apply_file_flux = ".false."
-        atm_alt_co2_opt = "drv_diag"        
+        atm_alt_co2_opt = "drv_diag"
 
     elif cdr_forcing == "DOR":
         lalk_forcing_apply_file_flux = ".false."
@@ -280,20 +280,19 @@ def create_smyle_clone(
         user_nl_file = f"{caseroot}/user_nl_{key}"
         with open(user_nl_file, "a") as fid:
             fid.write(user_nl[key])
-    
+
     # set ALT_CO2 tracers to CO2 tracers
     if cdr_forcing is not None:
         check_call(
             ["./set-alt-co2.sh", f"{rundir}/{refcase}.pop.r.{refdate}-00000.nc"],
             cwd=scriptroot,
         )
-    
+
     check_call(
         "module load python && ./case.build --skip-provenance-check",
         cwd=caseroot,
         shell=True,
     )
-
 
     return
 
@@ -491,14 +490,14 @@ def case_status(vintage=None, caselist=None, path_cases=None):
         path_cases = paths["cases"]
 
     caseroots = sorted(glob(f"{path_cases}/*"))
-        
+
     if vintage is not None:
         n = len(vintage) + 1
         caseroots = [c for c in caseroots if c[-n:] == f".{vintage}"]
 
     if caselist is not None:
         caseroots = [c for c in caseroots if os.path.basename(c) in caselist]
-        
+
     rows = []
     df_caseinfo = None
 
@@ -516,9 +515,9 @@ def case_status(vintage=None, caselist=None, path_cases=None):
         timestamp_run = None
         for l in lines:
             if "case.run success" in l:
-                datetime_str = l[:19]        
+                datetime_str = l[:19]
                 timestamp_run = datetime.strptime(datetime_str, "%Y-%m-%d %H:%M:%S")
-        
+
         row_data = dict(
             case=case,
             build=any("case.build success" in line for line in lines),

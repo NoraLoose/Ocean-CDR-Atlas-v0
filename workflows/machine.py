@@ -135,7 +135,9 @@ def building_jobids():
 def queue_info():
     """return a dictionary with a key for case name and value of JobId"""
     stdout = (
-        check_output("squeue -u ${USER} --Format=JobID:10,State:10,Name:256", shell=True)
+        check_output(
+            "squeue -u ${USER} --Format=JobID:10,State:10,Name:256", shell=True
+        )
         .decode("utf-8")
         .strip()
         .split("\n")
