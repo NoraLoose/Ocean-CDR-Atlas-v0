@@ -100,7 +100,7 @@ PRIORITY_3_VARS = [  # lowest priority to include
     "ALK_RESTORE_TEND",
 ]
 
-# variables which don't actually vary with polygon_id 
+# variables which don't actually vary with polygon_id
 # i.e. anything with `_ALT` in it
 # (though they arguably do vary with injection_date)
 COUNTERFACTUAL_PRIORITY_0_VARS = [
@@ -132,62 +132,72 @@ COUNTERFACTUAL_PRIORITY_2_VARS = [
 COUNTERFACTUAL_PRIORITY_3_VARS = [
     "ALK_ALT_CO2_RESTORE_TEND",
 ]
-COUNTERFACTUAL_VARS = COUNTERFACTUAL_PRIORITY_0_VARS + COUNTERFACTUAL_PRIORITY_1_VARS + COUNTERFACTUAL_PRIORITY_2_VARS + COUNTERFACTUAL_PRIORITY_3_VARS
+COUNTERFACTUAL_VARS = (
+    COUNTERFACTUAL_PRIORITY_0_VARS
+    + COUNTERFACTUAL_PRIORITY_1_VARS
+    + COUNTERFACTUAL_PRIORITY_2_VARS
+    + COUNTERFACTUAL_PRIORITY_3_VARS
+)
 
 # But loads of these data variables aren't really dependent data variables at all...
 COORDS = [
-    'dz',
-    'dzw',
-    'KMT',
-    'KMU',
-    'REGION_MASK',
-    'UAREA',
-    'TAREA',
-    'HU',
-    'HT',
-    'DXU',
-    'DYU',
-    'DXT',
-    'DYT',
-    'HTN',
-    'HTE',
-    'HUS',
-    'HUW',
-    'time_bound',
+    "dz",
+    "dzw",
+    "KMT",
+    "KMU",
+    "REGION_MASK",
+    "UAREA",
+    "TAREA",
+    "HU",
+    "HT",
+    "DXU",
+    "DYU",
+    "DXT",
+    "DYT",
+    "HTN",
+    "HTE",
+    "HUS",
+    "HUW",
+    "time_bound",
     # everything beyond here are just like fundamental constants or conversion factors, do we actually need these?
-    'ANGLE',
-    'ANGLET',
-    'days_in_norm_year',
-    'grav',
-    'omega',
-    'cp_sw',
-    'vonkar',
-    'rho_air',
-    'rho_sw',
-    'rho_fw',
-    'stefan_boltzmann',
-    'latent_heat_vapor',
-    'latent_heat_fusion',
-    'latent_heat_fusion_mks',
-    'ocn_ref_salinity',
-    'sea_ice_salinity',
-    'T0_Kelvin',
-    'salt_to_ppt',
-    'ppt_to_salt',
-    'mass_to_Sv',
-    'heat_to_PW',
-    'salt_to_Svppt',
-    'salt_to_mmday',
-    'momentum_factor',
-    'hflux_factor',
-    'fwflux_factor',
-    'salinity_factor',
-    'sflux_factor',
-    'nsurface_t',
-    'nsurface_u',
-    'radius',
-    'sound',
-    'cp_air',
+    "ANGLE",
+    "ANGLET",
+    "days_in_norm_year",
+    "grav",
+    "omega",
+    "cp_sw",
+    "vonkar",
+    "rho_air",
+    "rho_sw",
+    "rho_fw",
+    "stefan_boltzmann",
+    "latent_heat_vapor",
+    "latent_heat_fusion",
+    "latent_heat_fusion_mks",
+    "ocn_ref_salinity",
+    "sea_ice_salinity",
+    "T0_Kelvin",
+    "salt_to_ppt",
+    "ppt_to_salt",
+    "mass_to_Sv",
+    "heat_to_PW",
+    "salt_to_Svppt",
+    "salt_to_mmday",
+    "momentum_factor",
+    "hflux_factor",
+    "fwflux_factor",
+    "salinity_factor",
+    "sflux_factor",
+    "nsurface_t",
+    "nsurface_u",
+    "radius",
+    "sound",
+    "cp_air",
 ]
 
-VARS_TO_DROP = COUNTERFACTUAL_PRIORITY_0_VARS + COUNTERFACTUAL_PRIORITY_3_VARS + PRIORITY_0_VARS + PRIORITY_3_VARS
+VARS_TO_DROP = (
+    COUNTERFACTUAL_PRIORITY_0_VARS
+    + COUNTERFACTUAL_PRIORITY_3_VARS
+    + PRIORITY_0_VARS
+    + PRIORITY_3_VARS
+)
