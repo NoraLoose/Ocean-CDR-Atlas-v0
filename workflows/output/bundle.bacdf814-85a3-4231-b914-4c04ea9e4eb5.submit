@@ -1,0 +1,573 @@
+#!/bin/bash    
+#SBATCH --job-name bundle.bacdf814-85a3-4231-b914-4c04ea9e4eb5
+#SBATCH --account m4746
+#SBATCH --qos=regular
+#SBATCH --nodes=980
+#SBATCH --ntasks-per-node=128
+#SBATCH --time=10:00:00
+#SBATCH --exclusive
+#SBATCH --constraint=cpu
+
+module load python
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_001_1999-10-01_00007.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_001_1999-10-01_00007.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_003_1999-07-01_00014.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_003_1999-07-01_00014.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_006_1999-07-01_00026.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_006_1999-07-01_00026.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_007_1999-10-01_00031.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_007_1999-10-01_00031.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_008_1999-07-01_00034.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_008_1999-07-01_00034.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_016_1999-07-01_00066.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_016_1999-07-01_00066.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_016_1999-10-01_00067.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_016_1999-10-01_00067.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_019_1999-04-01_00077.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_019_1999-04-01_00077.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_021_1999-04-01_00085.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_021_1999-04-01_00085.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_026_1999-01-01_00104.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_026_1999-01-01_00104.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_027_1999-04-01_00109.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_027_1999-04-01_00109.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_027_1999-10-01_00111.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_027_1999-10-01_00111.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_029_1999-04-01_00117.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_029_1999-04-01_00117.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_032_1999-07-01_00130.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_032_1999-07-01_00130.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_035_1999-01-01_00140.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_035_1999-01-01_00140.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_040_1999-07-01_00162.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_040_1999-07-01_00162.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_041_1999-04-01_00165.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_041_1999-04-01_00165.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_042_1999-10-01_00171.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_042_1999-10-01_00171.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_055_1999-04-01_00221.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_055_1999-04-01_00221.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_061_1999-07-01_00246.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_061_1999-07-01_00246.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_070_1999-10-01_00283.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_070_1999-10-01_00283.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_071_1999-01-01_00284.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_071_1999-01-01_00284.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_076_1999-10-01_00307.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_076_1999-10-01_00307.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_078_1999-07-01_00314.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_078_1999-07-01_00314.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_081_1999-01-01_00324.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_081_1999-01-01_00324.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_081_1999-10-01_00327.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_081_1999-10-01_00327.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_083_1999-01-01_00332.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_083_1999-01-01_00332.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_084_1999-10-01_00339.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_084_1999-10-01_00339.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_085_1999-10-01_00343.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_085_1999-10-01_00343.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_093_1999-07-01_00374.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_093_1999-07-01_00374.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_099_1999-10-01_00399.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_099_1999-10-01_00399.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_101_1999-01-01_00404.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_101_1999-01-01_00404.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_103_1999-10-01_00415.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_103_1999-10-01_00415.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_104_1999-04-01_00417.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_104_1999-04-01_00417.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_109_1999-07-01_00438.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_109_1999-07-01_00438.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_119_1999-04-01_00477.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_119_1999-04-01_00477.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_119_1999-10-01_00479.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_119_1999-10-01_00479.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_120_1999-01-01_00480.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_120_1999-01-01_00480.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_120_1999-07-01_00482.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_120_1999-07-01_00482.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_120_1999-10-01_00483.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_120_1999-10-01_00483.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_121_1999-07-01_00486.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_121_1999-07-01_00486.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_122_1999-01-01_00488.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_122_1999-01-01_00488.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_122_1999-07-01_00490.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_122_1999-07-01_00490.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_130_1999-10-01_00523.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_130_1999-10-01_00523.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_136_1999-01-01_00544.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_136_1999-01-01_00544.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_139_1999-07-01_00558.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_139_1999-07-01_00558.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_004_1999-07-01_00618.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_004_1999-07-01_00618.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_005_1999-07-01_00622.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_005_1999-07-01_00622.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_006_1999-04-01_00625.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_006_1999-04-01_00625.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_010_1999-07-01_00642.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_010_1999-07-01_00642.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_014_1999-10-01_00659.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_014_1999-10-01_00659.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_018_1999-10-01_00675.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_018_1999-10-01_00675.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_024_1999-10-01_00699.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_024_1999-10-01_00699.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_028_1999-10-01_00715.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_028_1999-10-01_00715.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_034_1999-07-01_00738.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_034_1999-07-01_00738.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_036_1999-01-01_00744.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_036_1999-01-01_00744.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_039_1999-04-01_00757.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_039_1999-04-01_00757.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_042_1999-07-01_00770.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_042_1999-07-01_00770.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_043_1999-01-01_00772.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_043_1999-01-01_00772.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_043_1999-04-01_00773.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_043_1999-04-01_00773.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_043_1999-07-01_00774.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_043_1999-07-01_00774.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_043_1999-10-01_00775.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_043_1999-10-01_00775.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_044_1999-01-01_00776.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_044_1999-01-01_00776.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_044_1999-04-01_00777.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_044_1999-04-01_00777.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_044_1999-07-01_00778.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_044_1999-07-01_00778.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_044_1999-10-01_00779.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_044_1999-10-01_00779.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_045_1999-01-01_00780.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_045_1999-01-01_00780.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_045_1999-04-01_00781.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_045_1999-04-01_00781.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_045_1999-07-01_00782.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_045_1999-07-01_00782.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_045_1999-10-01_00783.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_045_1999-10-01_00783.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_046_1999-01-01_00784.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_046_1999-01-01_00784.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_046_1999-04-01_00785.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_046_1999-04-01_00785.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_046_1999-07-01_00786.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_046_1999-07-01_00786.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_046_1999-10-01_00787.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_046_1999-10-01_00787.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_047_1999-01-01_00788.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_047_1999-01-01_00788.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_047_1999-04-01_00789.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_047_1999-04-01_00789.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_047_1999-07-01_00790.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_047_1999-07-01_00790.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_047_1999-10-01_00791.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_047_1999-10-01_00791.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_048_1999-01-01_00792.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_048_1999-01-01_00792.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_048_1999-04-01_00793.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_048_1999-04-01_00793.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_048_1999-07-01_00794.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_048_1999-07-01_00794.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_048_1999-10-01_00795.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_048_1999-10-01_00795.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_049_1999-01-01_00796.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_049_1999-01-01_00796.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_049_1999-04-01_00797.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_049_1999-04-01_00797.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_049_1999-07-01_00798.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_049_1999-07-01_00798.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_049_1999-10-01_00799.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_049_1999-10-01_00799.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_050_1999-01-01_00800.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_050_1999-01-01_00800.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_050_1999-04-01_00801.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_050_1999-04-01_00801.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_050_1999-07-01_00802.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_050_1999-07-01_00802.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_050_1999-10-01_00803.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_050_1999-10-01_00803.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_051_1999-01-01_00804.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_051_1999-01-01_00804.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_051_1999-04-01_00805.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_051_1999-04-01_00805.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_051_1999-07-01_00806.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_051_1999-07-01_00806.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_051_1999-10-01_00807.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_051_1999-10-01_00807.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_052_1999-01-01_00808.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_052_1999-01-01_00808.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_052_1999-04-01_00809.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_052_1999-04-01_00809.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_052_1999-07-01_00810.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_052_1999-07-01_00810.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_052_1999-10-01_00811.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_052_1999-10-01_00811.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_053_1999-01-01_00812.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_053_1999-01-01_00812.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_053_1999-04-01_00813.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_053_1999-04-01_00813.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_053_1999-07-01_00814.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_053_1999-07-01_00814.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_053_1999-10-01_00815.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_053_1999-10-01_00815.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_054_1999-01-01_00816.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_054_1999-01-01_00816.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_054_1999-04-01_00817.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_054_1999-04-01_00817.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_054_1999-07-01_00818.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_054_1999-07-01_00818.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_054_1999-10-01_00819.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_054_1999-10-01_00819.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_055_1999-01-01_00820.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_055_1999-01-01_00820.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_055_1999-04-01_00821.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_055_1999-04-01_00821.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_055_1999-07-01_00822.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_055_1999-07-01_00822.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_055_1999-10-01_00823.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_055_1999-10-01_00823.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_056_1999-01-01_00824.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_056_1999-01-01_00824.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_056_1999-04-01_00825.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_056_1999-04-01_00825.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_056_1999-07-01_00826.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_056_1999-07-01_00826.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_056_1999-10-01_00827.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_056_1999-10-01_00827.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_057_1999-01-01_00828.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_057_1999-01-01_00828.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_057_1999-04-01_00829.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_057_1999-04-01_00829.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_057_1999-07-01_00830.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_057_1999-07-01_00830.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_057_1999-10-01_00831.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_057_1999-10-01_00831.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_058_1999-01-01_00832.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_058_1999-01-01_00832.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_058_1999-04-01_00833.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_058_1999-04-01_00833.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_058_1999-07-01_00834.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_058_1999-07-01_00834.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_058_1999-10-01_00835.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_058_1999-10-01_00835.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_059_1999-01-01_00836.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_059_1999-01-01_00836.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_059_1999-04-01_00837.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_059_1999-04-01_00837.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_059_1999-07-01_00838.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_059_1999-07-01_00838.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_059_1999-10-01_00839.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_059_1999-10-01_00839.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_060_1999-01-01_00840.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_060_1999-01-01_00840.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_060_1999-04-01_00841.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_060_1999-04-01_00841.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_060_1999-07-01_00842.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_060_1999-07-01_00842.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_060_1999-10-01_00843.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_060_1999-10-01_00843.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_061_1999-01-01_00844.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_061_1999-01-01_00844.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_061_1999-04-01_00845.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_061_1999-04-01_00845.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_061_1999-07-01_00846.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_061_1999-07-01_00846.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_061_1999-10-01_00847.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_061_1999-10-01_00847.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_062_1999-01-01_00848.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_062_1999-01-01_00848.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_062_1999-04-01_00849.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_062_1999-04-01_00849.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_062_1999-07-01_00850.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_062_1999-07-01_00850.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_062_1999-10-01_00851.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_062_1999-10-01_00851.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_063_1999-01-01_00852.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_063_1999-01-01_00852.001.submit &
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_063_1999-04-01_00853.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_063_1999-04-01_00853.001.submit &
+
+wait
