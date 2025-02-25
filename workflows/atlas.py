@@ -2,7 +2,10 @@ import os
 from subprocess import check_call
 from glob import glob
 
+import uuid
 import time
+
+from tqdm.notebook import tqdm
 
 import json
 import textwrap
@@ -54,6 +57,89 @@ def get_cftime(ds):
             calendar=ds.time.calendar,
         ),
     )
+
+
+def submit_bundle(cases, n_bundle=100, nodes_per_case=7, queue="regular"):
+    """submit a bundle of cases"""
+
+    submit_out_root = f"{scriptroot}/output/bundle-out"
+    os.makedirs(submit_out_root, exist_ok=True)
+
+    queue_job_root = f"{scriptroot}/output/bundled-jobs-caselists"
+    os.makedirs(queue_job_root, exist_ok=True)
+
+    header = lambda jobname, n_nodes: textwrap.dedent(
+        f"""\
+        #!/bin/bash    
+        #SBATCH --job-name bundle.{jobname}
+        #SBATCH --account {account}
+        #SBATCH --qos={queue}
+        #SBATCH --nodes={n_nodes}
+        #SBATCH --ntasks-per-node=128
+        #SBATCH --time=10:00:00
+        #SBATCH --exclusive
+        #SBATCH --constraint=cpu
+        
+        module load python
+        
+        """
+    )
+
+    bundle_id = str(uuid.uuid4())
+    n_this_bundle = n_bundle if len(cases) > n_bundle else len(cases)
+    n_nodes = n_this_bundle * nodes_per_case
+    script = [header(bundle_id, n_nodes)]
+
+    submitted = []
+    submit_batch = []
+    for n, case in enumerate(cases):
+
+        # append to the script
+        script.append(
+            textwrap.dedent(
+                f"""
+            cd {paths['cases']}/{case}
+            ./case.submit --no-batch &> {submit_out_root}/{case}.submit &
+            
+            """
+            )
+        )
+        submit_batch.append(case)
+
+        # write casename to file with jobname id so we can know which
+        # cases are in this bundle by querying the queue
+        with open(f"{queue_job_root}/{bundle_id}.caselist", "a") as fid:
+            fid.write(f"{case}\n")
+
+        if (len(script) - 1 == n_bundle) or n + 1 == len(cases):
+            script.append("wait")
+
+            bundle_submit = f"bundle.{bundle_id}.submit"
+            with open(f"output/{bundle_submit}", "w") as fid:
+                fid.writelines(script)
+
+            # submit the bundle to the queue
+            check_call(
+                f"sbatch {bundle_submit} > {bundle_submit}.out",
+                shell=True,
+                cwd=f"{scriptroot}/output",
+            )
+
+            # reset to begin again
+            submitted.extend(submit_batch)
+
+            bundle_id = str(uuid.uuid4())
+            remaining_cases = cases[n:]
+            n_this_bundle = (
+                n_bundle if len(remaining_cases) > n_bundle else len(remaining_cases)
+            )
+            n_nodes = n_this_bundle * nodes_per_case
+            script = [header(bundle_id, n_nodes)]
+            submit_batch = []
+
+    assert len(submitted) == len(cases) and sorted(submitted) == sorted(
+        cases
+    ), "Not all cases were submitted"
 
 
 def submit_cases(cases, n_simult=10):
@@ -178,7 +264,7 @@ def submit_build(blueprint, case, clobber=False, run_local=False, **kwargs):
     else:
         check_call(["sbatch", build_script])
 
-        
+
 class md_jinja_engine(NBClientEngine):
     @classmethod
     def execute_managed_notebook(cls, nb_man, kernel_name, **kwargs):
@@ -193,7 +279,7 @@ class md_jinja_engine(NBClientEngine):
 
 
 # what's the right way to register an engine?
-pm.engines.papermill_engines._engines["md_jinja"] = md_jinja_engine        
+pm.engines.papermill_engines._engines["md_jinja"] = md_jinja_engine
 
 
 class global_irf_map(object):
@@ -213,6 +299,7 @@ class global_irf_map(object):
         )
         self._df_case_status = None
         self.df_validation = None
+        self.df_analysis = None
         self.set_experiments()
 
     def set_experiments(self):
@@ -276,7 +363,7 @@ class global_irf_map(object):
 
             for p in range(0, n):
                 polygon_master_index += 1
-                
+
                 for i, d in enumerate(start_dates):
 
                     file = f"{cdr_forcing_path}/alk-forcing-{b}.{p:03d}-{d}.nc"
@@ -307,18 +394,26 @@ class global_irf_map(object):
         self.df = pd.DataFrame(rows).set_index("case")
         self.cases = self.df.index.to_list()
 
-    def build(self, phase, run_local=False, clobber=False, clobber_list=[]):
+    def build(
+        self,
+        phase,
+        run_local=False,
+        clobber=False,
+        clobber_list=[],
+        just_these_cases=[],
+        queue="regular",
+    ):
         """build cases in SLURM script"""
 
         building_jobs = machine.building_jobids()
         if building_jobs:
-            print(f"waiting on {len(building_jobs)} build(s)")        
-        
+            print(f"waiting on {len(building_jobs)} build(s)")
+
         while building_jobs:
             building_jobs = machine.building_jobids()
             print("...", end="")
             time.sleep(30)
-        
+
         # build a subset or all
         if phase == "reproduce-reference":
             df_build = self.df.loc[self.cases[0] : self.cases[0]]
@@ -334,8 +429,12 @@ class global_irf_map(object):
 
         self._refresh_case_status()
         df_case_status = self.df_case_status
-        
+
         for case, caseinfo in df_build.iterrows():
+
+            if just_these_cases:
+                if case not in just_these_cases:
+                    continue
 
             built = False
             if df_case_status is not None:
@@ -344,7 +443,7 @@ class global_irf_map(object):
                         self.clobber_case(case)
                     else:
                         built = df_case_status.loc[case].build
-            
+
             if not built:
                 build_script = submit_build(
                     blueprint=caseinfo["blueprint"],
@@ -355,11 +454,12 @@ class global_irf_map(object):
                     stop_n=caseinfo["stop_n"],
                     wallclock=caseinfo["wallclock"],
                     curtail_output=caseinfo["curtail_output"],
+                    queue=queue,
                     clobber=clobber,
                     run_local=run_local,
                 )
 
-    def compute(self):
+    def compute(self, n_bundle=0, bundle_queue="regular", just_these_cases=[]):
         """perform the computation"""
 
         building_jobs = machine.building_jobids()
@@ -371,51 +471,61 @@ class global_irf_map(object):
             print("...", end="")
             time.sleep(30)
 
-        self._refresh_case_status()            
+        self._refresh_case_status()
 
         caselist = self.df_case_status.loc[
             (self.df_case_status.build)
-            & ~(self.df_case_status.submitted)            
-            & ~(self.df_case_status.run_completed)
+            & ~(self.df_case_status.archive)
             & ~(self.df_case_status.Queued)
         ].index.to_list()
 
-        submit_cases(caselist)
+        if just_these_cases:
+            for case in just_these_cases:
+                assert case in caselist, f"{case} is not in the list"
+            caselist = just_these_cases
+
+        if n_bundle == 0:
+            submit_cases(caselist)
+        else:
+            submit_bundle(
+                caselist, n_bundle=n_bundle, nodes_per_case=7, queue=bundle_queue
+            )
+
         return len(caselist)
 
     def check_cases(self):
         """identify cases in pathological state"""
-        
+
         if self.df_case_status is None:
             return []
-        
+
         caselist = self.df_case_status.loc[
             (self.df_case_status.build)
-            & (self.df_case_status.submitted)            
+            & (self.df_case_status.submitted)
             & ~(self.df_case_status.run_completed)
             & ~(self.df_case_status.Queued)
         ].index.to_list()
-        
+
         if caselist:
             print("the following cases may have failed:")
             for case in caselist:
                 print(f"  {case}")
         return caselist
-    
+
     def clobber_case(self, case):
         """remove all case data from disk"""
         for key, path in self.paths_case(case).items():
             check_call(["rm", "-fr", path])
-    
+
     def validate(self, clobber=False, n=None):
         """validate the model integrations"""
 
-        self._refresh_case_status()        
-        
+        self._refresh_case_status()
+
         caselist = self.df_case_status.loc[
             (self.df_case_status.archive)
         ].index.to_list()
-        
+
         if n is not None:
             caselist = caselist[:n]
 
@@ -428,11 +538,7 @@ class global_irf_map(object):
             self.dask_cluster = machine.dask_cluster()
 
         rows = []
-        for case in caselist:
-
-            print("=" * 80)
-            print(case, end="\n")
-
+        for case in tqdm(caselist):
             ds_out = self._validate_case(case, clobber)
 
             if ds_out is None:
@@ -451,18 +557,22 @@ class global_irf_map(object):
 
         if self.dask_cluster is not None:
             self.dask_cluster.shutdown()
-            self.dask_cluster = None            
+            self.dask_cluster = None
 
     def analyze(self, clobber=False, n=None):
         """perform analysis and generate output datasets"""
-       
+
         caselist = self.df_case_status.loc[
             (self.df_case_status.archive)
         ].index.to_list()
 
+        caselist = list(
+            filter(lambda c: self.df.loc[c].cdr_forcing is not None, caselist)
+        )
+
         if n is not None:
-            caselist = caselist[:n]        
-        
+            caselist = caselist[:n]
+
         zarr_stores_exist = [
             os.path.exists(self.paths_case(case)["analyze"]) for case in caselist
         ]
@@ -471,34 +581,33 @@ class global_irf_map(object):
         if not all(zarr_stores_exist) or clobber:
             self.dask_cluster = machine.dask_cluster()
 
-        paths = []
-        for case in caselist:
+        rows = []
+        for case in tqdm(caselist):
             if "control" in case:
                 continue
-            print("=" * 80)
-            print(case, end="\n")
-            paths.append(self._analyze_case(case, clobber))
+            zarr_path = self._analyze_case(case, clobber)
+            rows.append(dict(case=case, zarr_path=zarr_path))
+
+        self.df_analysis = pd.DataFrame(rows).set_index("case")
 
         if self.dask_cluster is not None:
             self.dask_cluster.shutdown()
             self.dask_cluster = None
 
-        return paths
-
     def visualize(self, clobber=False):
         """run visualization notebooks"""
-        
+
         self._refresh_case_status()
-        
+
         caselist = self.df_case_status.loc[
             (self.df_case_status.archive)
         ].index.to_list()
-        
+
         for case in caselist:
-            
+
             caseinfo = self.df.loc[case].to_dict()
             caseinfo["case"] = case
-            
+
             zarr_store = self.paths_case(case)["validate"]
             if os.path.exists(zarr_store):
                 nb_out = f"{path_validation_nb_out}/{case}.ipynb"
@@ -512,36 +621,38 @@ class global_irf_map(object):
                         engine_name="md_jinja",
                         jinja_data=caseinfo,
                     )
-                    
+
             zarr_store = self.paths_case(case)["analyze"]
             if os.path.exists(zarr_store):
                 nb_out = f"{path_analysis_nb_out}/{case}.ipynb"
                 if not os.path.exists(nb_out) or clobber:
-                    print(f"executing: {nb_out}")                    
+                    print(f"executing: {nb_out}")
                     pm.execute_notebook(
                         "_plot_case_analysis.ipynb",
                         nb_out,
                         parameters=dict(zarr_store=zarr_store),
                         kernel_name="python3",
                         engine_name="md_jinja",
-                        jinja_data=caseinfo,            
-                    )       
-    
+                        jinja_data=caseinfo,
+                    )
+
     @property
     def df_case_status(self):
         """
         Return DataFrame with case status info
         """
         if self._df_case_status is None:
-            self._refresh_case_status()        
+            self._refresh_case_status()
         return self._df_case_status
-    
+
     def _refresh_case_status(self):
         """
         Populate case status DataFrame
         """
-        self._df_case_status = cesm.case_status(self.vintage, caselist=self.df.index.to_list())
-            
+        self._df_case_status = cesm.case_status(
+            self.vintage, caselist=self.df.index.to_list()
+        )
+
     def _path_reference_timeseries(self, variable):
         """
         return path to timeseries data — replace with data catalog API
@@ -565,8 +676,7 @@ class global_irf_map(object):
             validate=f"{path_validation_data}/{case}.validation.zarr",
             analyze=f"{path_analysis_data}/{case}.analysis.zarr",
         )
-    
-    
+
     def _validate_case(self, case, clobber=False):
         """compute validation dataset and persist as Zarr store"""
 
@@ -644,8 +754,6 @@ class global_irf_map(object):
                     print(f"{v_case} not found", end=", ")
                     continue
 
-                print(v_case, end=", ")
-
                 with xr.open_dataset(
                     self._path_reference_timeseries(v_ref),
                     decode_times=False,
@@ -695,12 +803,8 @@ class global_irf_map(object):
                         ds_out[f"{v_case}_diff"].data = (
                             ds[v_case] - ds_ref[v_ref]
                         ).isel(**isel_slab)
-            print()
-
-            print(f"computing {zarr_store}")
             ds_out = ds_out.compute()
 
-            print(f"writing {zarr_store}")
             ds_out.to_zarr(
                 zarr_store,
                 mode="w",
@@ -717,11 +821,7 @@ class global_irf_map(object):
             return zarr_store
 
         ds = analysis.open_gx1v7_dataset(case, stream="pop.h")
-
-        print(f"computing {zarr_store}")
         ds_out = analysis.reduction(ds).compute()
-
-        print(f"writing {zarr_store}")
         ds_out.to_zarr(
             zarr_store,
             mode="w",

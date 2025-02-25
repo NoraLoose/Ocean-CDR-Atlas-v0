@@ -77,7 +77,7 @@ def open_gx1v7_dataset(case, stream="pop.h"):
     ds["time_delta"] = ds[tb_var].diff(d2).squeeze()
     ds = ds.set_coords("time_delta")
     ds.time_delta.attrs["long_name"] = "∆t"
-    ds.time_delta.attrs["units"] = "days"    
+    ds.time_delta.attrs["units"] = "days"
 
     # replace coords to account for land-block elimination
     ds["TLONG"] = grid.TLONG
@@ -101,61 +101,76 @@ def open_gx1v7_dataset(case, stream="pop.h"):
 
 
 def reduction(ds):
-    
+
     # time_delta in days, convert to years
     dt = ds.time_delta / 365
-    
+
     with xr.set_options(keep_attrs=True):
-        
+
         # air-sea CO2 flux
         fg_co2_add = (-1.0) * (ds.FG_CO2 - ds.FG_ALT_CO2).where(ds.KMT > 0)
         fg_co2_add *= nmolcm2s_to_molm2yr
         fg_co2_add.attrs["units"] = "mol m$^{-2}$ yr$^{-1}$"
-        
-        alk_flux = (compute_global_ts(ds.ALK_FLUX * nmolcm2s_to_molm2yr, ds.area_m2) * dt).cumsum("time")
-        alk_flux.attrs["units"] = "mol"
-        
-        dic_flux = (compute_global_ts(ds.DIC_FLUX * nmolcm2s_to_molm2yr, ds.area_m2) * dt).cumsum("time")        
-        dic_flux.attrs["units"] = "mol"        
 
-        alk_flux_total = (ds.ALK_FLUX * nmolcm2s_to_molm2yr * dt).sum("time").where(ds.KMT > 0)
+        alk_flux = (
+            compute_global_ts(ds.ALK_FLUX * nmolcm2s_to_molm2yr, ds.area_m2) * dt
+        ).cumsum("time")
+        alk_flux.attrs["units"] = "mol"
+
+        dic_flux = (
+            compute_global_ts(ds.DIC_FLUX * nmolcm2s_to_molm2yr, ds.area_m2) * dt
+        ).cumsum("time")
+        dic_flux.attrs["units"] = "mol"
+
+        alk_flux_total = (
+            (ds.ALK_FLUX * nmolcm2s_to_molm2yr * dt).sum("time").where(ds.KMT > 0)
+        )
         alk_flux_total.attrs["units"] = "mol m$^{-2}$"
-        
-        dic_flux_total = (ds.DIC_FLUX * nmolcm2s_to_molm2yr * dt).sum("time").where(ds.KMT > 0)
+
+        dic_flux_total = (
+            (ds.DIC_FLUX * nmolcm2s_to_molm2yr * dt).sum("time").where(ds.KMT > 0)
+        )
         dic_flux_total.attrs["units"] = "mol m$^{-2}$"
-        
-        dic_add = (-1.0) * (compute_global_ts(fg_co2_add, ds.area_m2) * dt).cumsum("time")
+
+        dic_add = (-1.0) * (compute_global_ts(fg_co2_add, ds.area_m2) * dt).cumsum(
+            "time"
+        )
         dic_add.attrs["long_name"] = "Change in DIC inventory"
         dic_add.attrs["units"] = dic_add.attrs["units"].replace("yr$^{-1}$", "").strip()
 
         dic_surf = ds.DIC.isel(z_t=0)
-        alk_surf = ds.ALK.isel(z_t=0)        
+        alk_surf = ds.ALK.isel(z_t=0)
         dic_add_surf = ds.DIC.isel(z_t=0) - ds.DIC_ALT_CO2.isel(z_t=0)
         alk_add_surf = ds.ALK.isel(z_t=0) - ds.ALK_ALT_CO2.isel(z_t=0)
-        
+
         pH_add_surf = ds.PH - ds.PH_ALT_CO2
         pco2_add_surf = ds.pCO2SURF - ds.pCO2SURF_ALT_CO2
-        
-    dso = xr.Dataset(
-        dict(
-            AREA_M2=ds.area_m2,
-            FG_CO2_ADD=fg_co2_add,
-            DIC_ADD_TOTAL=dic_add,
-            ALK_FLUX=alk_flux,
-            DIC_FLUX=dic_flux,
-            ALK_FLUX_TOTAL=alk_flux_total,
-            DIC_FLUX_TOTAL=dic_flux_total,
-            DIC_SURF=dic_surf,
-            ALK_SURF=alk_surf,
-            DIC_ADD_SURF=dic_add_surf,
-            ALK_ADD_SURF=alk_add_surf,
-            PH_ADD_SURF=pH_add_surf,
-            pCO2_ADD_SURF=pco2_add_surf
+
+    dso = (
+        xr.Dataset(
+            dict(
+                AREA_M2=ds.area_m2,
+                FG_CO2_ADD=fg_co2_add,
+                DIC_ADD_TOTAL=dic_add,
+                ALK_FLUX=alk_flux,
+                DIC_FLUX=dic_flux,
+                ALK_FLUX_TOTAL=alk_flux_total,
+                DIC_FLUX_TOTAL=dic_flux_total,
+                DIC_SURF=dic_surf,
+                ALK_SURF=alk_surf,
+                DIC_ADD_SURF=dic_add_surf,
+                ALK_ADD_SURF=alk_add_surf,
+                PH_ADD_SURF=pH_add_surf,
+                pCO2_ADD_SURF=pco2_add_surf,
+            )
         )
-    ).drop(["TAREA", "z_t"]).set_coords(["AREA_M2"])
+        .drop(["TAREA", "z_t"])
+        .set_coords(["AREA_M2"])
+    )
     dso.attrs["case"] = ds.title
     return dso
-    
+
+
 def compute_additional_CO2_flux(ds):
     """compute the additional CO2 flux"""
     with xr.set_options(keep_attrs=True):

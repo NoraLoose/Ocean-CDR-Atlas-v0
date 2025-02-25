@@ -1,8 +1,14 @@
 #!/bin/bash
 
-module load e4s
-spack env activate gcc
-spack load nco
+set -e 
+
+# old way
+#module load e4s
+#spack env activate gcc
+#spack load nco
+
+# new way
+module load climate-utils
 
 POP_R=${1}
 

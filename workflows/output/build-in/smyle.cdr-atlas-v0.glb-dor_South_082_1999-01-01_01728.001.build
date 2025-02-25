@@ -15,5 +15,5 @@ module restore
 module load conda
 conda activate cworthy
 
-python atlas.py --blueprint smyle --case smyle.cdr-atlas-v0.glb-dor_South_082_1999-01-01_01728.001 --clobber False --kwargs '{"cdr_forcing": "DOR", "cdr_forcing_file": "/global/cfs/projectdirs/m4746/Projects/OAE-Efficiency-Map/data/alk-forcing/OAE-Efficiency-Map/alk-forcing-South.082-1999-01.nc", "refdate": "0347-01-01", "stop_n": 15, "wallclock": "10:00:00", "curtail_output": true}'
+python atlas.py --blueprint smyle --case smyle.cdr-atlas-v0.glb-dor_South_082_1999-01-01_01728.001 --clobber False --kwargs '{"cdr_forcing": "DOR", "cdr_forcing_file": "/global/cfs/projectdirs/m4746/Projects/OAE-Efficiency-Map/data/alk-forcing/OAE-Efficiency-Map/alk-forcing-South.082-1999-01.nc", "refdate": "0347-01-01", "stop_n": 15, "wallclock": "10:00:00", "curtail_output": true, "queue": "regular"}'
 
