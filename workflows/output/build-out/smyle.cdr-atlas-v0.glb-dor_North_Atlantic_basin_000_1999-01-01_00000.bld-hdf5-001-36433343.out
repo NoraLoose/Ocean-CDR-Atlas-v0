@@ -1,0 +1,71 @@
+Unloading the cpe module is insufficient to restore the system defaults.
+Please run 'source
+/opt/cray/pe/cpe/24.07/restore_lmod_system_defaults.[csh|sh]'. 
+Running "module reset". Resetting modules to system default. The following $MODULEPATH directories have been removed: /opt/cray/pe/lmod/modulefiles/mpi/gnu/12.0/ofi/1.0/cray-mpich/8.0
+Did not find an alias or longname compset match for OMIP_DATM%JRA-1p4-2018_SLND_CICE_POP2%ECO_DROF%JRA-1p4-2018_SGLC_WW3_SIAC_SESP 
+Warning: missing non-idmap ROF2OCN_FMAPNAME for rof_grid, JRA025v2 and ocn_grid gx1v7 
+Compset forcing is 
+ATM component is  Data driven ATM interannual JRA55 forcing, v1.4, through 2018
+LND component is Stub land component
+ICE component is Sea ICE (cice) model version 5
+OCN component is POP2 Ecosystem
+ROF component is Data runoff modelJRA55 interannual forcing, v1.4, through 2018
+GLC component is Stub glacier (land ice) component
+WAV component is Wave Watch
+IAC component is Stub iac component
+ESP component is Stub external system processing (ESP) component
+Pes     specification file is /global/cfs/cdirs/m4746/Projects/Ocean-CDR-Atlas-v0/codes/cesm2.2.0/components/pop//cime_config/config_pes.xml
+Traceback (most recent call last):
+  File "/global/cfs/cdirs/m4746/Projects/Ocean-CDR-Atlas-v0/codes/cesm2.2.0/cime/scripts/./create_newcase", line 243, in <module>
+    _main_func(__doc__)
+  File "/global/cfs/cdirs/m4746/Projects/Ocean-CDR-Atlas-v0/codes/cesm2.2.0/cime/scripts/./create_newcase", line 230, in _main_func
+    case.create(casename, srcroot, compset, grid, user_mods_dir=user_mods_dir,
+  File "/global/cfs/cdirs/m4746/Projects/Ocean-CDR-Atlas-v0/codes/cesm2.2.0/cime/scripts/Tools/../../scripts/lib/CIME/case/case.py", line 1634, in create
+    self.configure(compset_name, grid_name, machine_name=machine_name,
+  File "/global/cfs/cdirs/m4746/Projects/Ocean-CDR-Atlas-v0/codes/cesm2.2.0/cime/scripts/Tools/../../scripts/lib/CIME/case/case.py", line 963, in configure
+    machobj = Machines(machine=machine_name, extra_machines_dir=extra_machines_dir)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/cfs/cdirs/m4746/Projects/Ocean-CDR-Atlas-v0/codes/cesm2.2.0/cime/scripts/Tools/../../scripts/lib/CIME/XML/machines.py", line 43, in __init__
+    GenericXML.__init__(self, infile, schema)
+  File "/global/cfs/cdirs/m4746/Projects/Ocean-CDR-Atlas-v0/codes/cesm2.2.0/cime/scripts/Tools/../../scripts/lib/CIME/XML/generic_xml.py", line 64, in __init__
+    self.read(infile, schema)
+  File "/global/cfs/cdirs/m4746/Projects/Ocean-CDR-Atlas-v0/codes/cesm2.2.0/cime/scripts/Tools/../../scripts/lib/CIME/XML/generic_xml.py", line 102, in read
+    self.read_fd(fd)
+  File "/global/cfs/cdirs/m4746/Projects/Ocean-CDR-Atlas-v0/codes/cesm2.2.0/cime/scripts/Tools/../../scripts/lib/CIME/XML/generic_xml.py", line 126, in read_fd
+    self.tree = ET.parse(fd)
+                ^^^^^^^^^^^^
+  File "/global/common/software/nersc/pe/conda-envs/24.1.0/python-3.11/nersc-python/lib/python3.11/xml/etree/ElementTree.py", line 1218, in parse
+    tree.parse(source, parser)
+  File "/global/common/software/nersc/pe/conda-envs/24.1.0/python-3.11/nersc-python/lib/python3.11/xml/etree/ElementTree.py", line 580, in parse
+    self._root = parser._parse_whole(source)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xml.etree.ElementTree.ParseError: not well-formed (invalid token): line 2133, column 22
+================================================================================
+BUILDING
+smyle
+smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_000_1999-01-01_00000.bld-hdf5-001
+{"cdr_forcing": "DOR", "cdr_forcing_file": "/global/cfs/projectdirs/m4746/Projects/OAE-Efficiency-Map/data/alk-forcing/OAE-Efficiency-Map/alk-forcing-North_Atlantic_basin.000-1999-01.nc", "refdate": "0347-01-01", "stop_n": 15, "wallclock": "10:00:00", "curtail_output": true, "queue": "regular"}
+================================================================================
+
+Traceback (most recent call last):
+  File "/global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/atlas.py", line 918, in <module>
+    main()
+  File "/global/homes/m/mattlong/.conda/envs/cworthy/lib/python3.12/site-packages/click/core.py", line 1157, in __call__
+    return self.main(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/homes/m/mattlong/.conda/envs/cworthy/lib/python3.12/site-packages/click/core.py", line 1078, in main
+    rv = self.invoke(ctx)
+         ^^^^^^^^^^^^^^^^
+  File "/global/homes/m/mattlong/.conda/envs/cworthy/lib/python3.12/site-packages/click/core.py", line 1434, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/homes/m/mattlong/.conda/envs/cworthy/lib/python3.12/site-packages/click/core.py", line 783, in invoke
+    return __callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/atlas.py", line 914, in main
+    gen_case(case, clobber=clobber, **kwargs)
+  File "/global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/cesm.py", line 61, in create_smyle_clone
+    check_call(
+  File "/global/homes/m/mattlong/.conda/envs/cworthy/lib/python3.12/subprocess.py", line 413, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command 'module load python && ./create_newcase --compset OMIP_DATM%JRA-1p4-2018_SLND_CICE_POP2%ECO_DROF%JRA-1p4-2018_SGLC_WW3_SIAC_SESP --case /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_000_1999-01-01_00000.bld-hdf5-001 --res TL319_g17 --machine perlmutter --compiler intel --project m4746 --queue regular --walltime 10:00:00 --handle-preexisting-dirs r --run-unsupported' returned non-zero exit status 1.

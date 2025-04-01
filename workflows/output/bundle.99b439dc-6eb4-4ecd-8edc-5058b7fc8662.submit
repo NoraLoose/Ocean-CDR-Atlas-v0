@@ -1,0 +1,19 @@
+#!/bin/bash    
+#SBATCH --job-name bundle.99b439dc-6eb4-4ecd-8edc-5058b7fc8662
+#SBATCH --account m4746
+#SBATCH --qos=regular
+#SBATCH --nodes=7
+#SBATCH --ntasks-per-node=128
+#SBATCH --time=10:00:00
+#SBATCH --exclusive
+#SBATCH --constraint=cpu
+
+set -e
+
+module load python
+
+
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_South_292_1999-01-01_02568.001
+./case.submit --no-batch &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/bundle-out/smyle.cdr-atlas-v0.glb-dor_South_292_1999-01-01_02568.001.submit &
+
+wait
