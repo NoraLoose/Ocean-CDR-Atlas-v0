@@ -193,6 +193,7 @@ COORDS = [
     "radius",
     "sound",
     "cp_air",
+    "area_m2"
 ]
 
 VARS_TO_DROP = (

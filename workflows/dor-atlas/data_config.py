@@ -20,8 +20,8 @@ def get_dask_local_dir():
     return str(dask_local_directory)
 
 
-def get_compressed_data_dir(parent_dir):
-    out_dir = pathlib.Path(parent_dir) / "compressed"
+def get_compressed_data_dir(parent_dir:str = "/global/cfs/projectdirs/m4746/Datasets/Ocean-CDR-Atlas-v0/DOR-Efficiency-Map"):
+    out_dir = pathlib.Path(parent_dir) / "research-grade-compressed"
     out_dir.mkdir(parents=True, exist_ok=True)
     return out_dir
 

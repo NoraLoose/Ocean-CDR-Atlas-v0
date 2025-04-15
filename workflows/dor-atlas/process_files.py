@@ -7,8 +7,9 @@ import pandas as pd
 import numpy as np
 import variables
 import cftime
-import tqdm
+import concurrent.futures
 
+from fastprogress.fastprogress import master_bar, progress_bar
 
 scratch = pathlib.Path(os.environ["SCRATCH"]) / "dor"
 joblib_cache_dir = scratch / "joblib"
@@ -214,19 +215,35 @@ def set_encoding(ds: xr.Dataset) -> xr.Dataset:
     return ds
 
 
+
+def load_case_dataset(
+    filepath: str | pathlib.Path,
+    case: str,
+    case_metadata: pd.Series,
+) -> xr.Dataset:
+    ds = (
+        xr.open_dataset(filepath, engine="netcdf4", decode_timedelta=True)
+        .pipe(set_coords)
+        .pipe(add_additional_coords, case, case_metadata)
+        .pipe(expand_ensemble_dims)
+        # .pipe(compute_anomalies)
+         .pipe(set_encoding)
+    )
+    return ds
+
+
+
 def open_compress_and_save_file(
     filepath: str | pathlib.Path,
     out_path_prefix: str | pathlib.Path,
     case: str,
     case_metadata: pd.Series,
 ) -> None:
-    ds = (
-        xr.open_dataset(filepath, engine="netcdf4")
-        .pipe(set_coords)
-        .pipe(add_additional_coords, case, case_metadata)
-        .pipe(expand_ensemble_dims)
-        # .pipe(compute_anomalies)
-        .pipe(set_encoding)
+    
+    ds = load_case_dataset(
+        filepath=filepath,
+        case=case,
+        case_metadata=case_metadata,
     )
 
     polygon_id = ds.polygon_id.data.item()
@@ -270,6 +287,7 @@ def open_compress_and_save_file(
     return out_filepath
 
 
+@memory.cache
 def glob_nc_files(base_path: str | pathlib.Path, case: str):
     base_path = pathlib.Path(base_path)
     print("Globbing files (this may take a while)...")
@@ -279,23 +297,20 @@ def glob_nc_files(base_path: str | pathlib.Path, case: str):
     return nc_files
 
 
+
+
+
 @memory.cache
-def _process_single_case(
+def _process_single_case_no_dask(
     *, case: str, case_metadata: pd.Series, out_path_prefix: str, data_dir_path: str
 ):
     nc_files = glob_nc_files(base_path=data_dir_path, case=case)
-    tasks = []
-    for file in nc_files:
-        tasks.append(
-            dask.delayed(open_compress_and_save_file)(
-                file,
-                out_path_prefix=out_path_prefix,
-                case=case,
-                case_metadata=case_metadata,
-            )
-        )
-
-    results = dask.compute(*tasks, retries=4)
+    results = []
+    with concurrent.futures.ProcessPoolExecutor(max_workers=dask.system.CPU_COUNT) as executor:
+        future_tasks = [executor.submit(open_compress_and_save_file, file, out_path_prefix, case, case_metadata) for file in nc_files]
+        gen = progress_bar(concurrent.futures.as_completed(future_tasks), total = len(nc_files))
+        for task in gen:
+            results.append(task.result())
     return results
 
 
@@ -305,12 +320,15 @@ def process_cases(
     done_cases: list[str],
     df: pd.DataFrame,
 ):
-    for case in (pbar := tqdm.tqdm(done_cases)):
-        pbar.set_description(f"Processing {case}")
+
+    mb = master_bar(done_cases)
+    for case in mb:
+        mb.main_bar.comment = f"Processing {case}"
         case_metadata = get_case_metadata(case, df)
-        _process_single_case(
+        _process_single_case_no_dask(
             case=case,
             case_metadata=case_metadata,
             out_path_prefix=out_path_prefix,
             data_dir_path=data_dir_path,
         )
+        mb.write(f'Finished processing case: {case}')
