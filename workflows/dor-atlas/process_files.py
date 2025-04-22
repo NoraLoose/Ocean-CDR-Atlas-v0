@@ -215,7 +215,6 @@ def set_encoding(ds: xr.Dataset) -> xr.Dataset:
     return ds
 
 
-
 def load_case_dataset(
     filepath: str | pathlib.Path,
     case: str,
@@ -227,10 +226,9 @@ def load_case_dataset(
         .pipe(add_additional_coords, case, case_metadata)
         .pipe(expand_ensemble_dims)
         # .pipe(compute_anomalies)
-         .pipe(set_encoding)
+        .pipe(set_encoding)
     )
     return ds
-
 
 
 def open_compress_and_save_file(
@@ -239,7 +237,6 @@ def open_compress_and_save_file(
     case: str,
     case_metadata: pd.Series,
 ) -> None:
-    
     ds = load_case_dataset(
         filepath=filepath,
         case=case,
@@ -297,18 +294,24 @@ def glob_nc_files(base_path: str | pathlib.Path, case: str):
     return nc_files
 
 
-
-
-
 @memory.cache
 def _process_single_case_no_dask(
     *, case: str, case_metadata: pd.Series, out_path_prefix: str, data_dir_path: str
 ):
     nc_files = glob_nc_files(base_path=data_dir_path, case=case)
     results = []
-    with concurrent.futures.ProcessPoolExecutor(max_workers=dask.system.CPU_COUNT) as executor:
-        future_tasks = [executor.submit(open_compress_and_save_file, file, out_path_prefix, case, case_metadata) for file in nc_files]
-        gen = progress_bar(concurrent.futures.as_completed(future_tasks), total = len(nc_files))
+    with concurrent.futures.ProcessPoolExecutor(
+        max_workers=dask.system.CPU_COUNT
+    ) as executor:
+        future_tasks = [
+            executor.submit(
+                open_compress_and_save_file, file, out_path_prefix, case, case_metadata
+            )
+            for file in nc_files
+        ]
+        gen = progress_bar(
+            concurrent.futures.as_completed(future_tasks), total=len(nc_files)
+        )
         for task in gen:
             results.append(task.result())
     return results
@@ -320,7 +323,6 @@ def process_cases(
     done_cases: list[str],
     df: pd.DataFrame,
 ):
-
     mb = master_bar(done_cases)
     for case in mb:
         mb.main_bar.comment = f"Processing {case}"
@@ -331,4 +333,4 @@ def process_cases(
             out_path_prefix=out_path_prefix,
             data_dir_path=data_dir_path,
         )
-        mb.write(f'Finished processing case: {case}')
+        mb.write(f"Finished processing case: {case}")

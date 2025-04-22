@@ -9,7 +9,9 @@ from typing import Optional
 import cftime
 import dask
 import dask.array as dsa
+import fsspec
 import joblib
+import loky
 import ndpyramid
 import numpy as np
 import pandas as pd
@@ -17,6 +19,7 @@ import pop_tools
 import typer
 import xarray as xr
 import zarr
+from dask.diagnostics import ProgressBar
 from rich.console import Console
 from rich.progress import BarColumn, Progress, TaskProgressColumn, TextColumn
 from rich.table import Table
@@ -37,6 +40,9 @@ except ImportError:
     )
     sys.exit(1)
 
+
+pbar = ProgressBar()
+pbar.register()
 # Set up Rich console for nice formatting
 console = Console()
 
@@ -394,17 +400,7 @@ def process_single_case_no_dask(
     if not max_workers:
         max_workers = os.cpu_count()
 
-    # with Progress(
-    #     SpinnerColumn(),
-    #     TextColumn("[bold blue]{task.description}"),
-    #     BarColumn(),
-    #     TaskProgressColumn(),
-    #     console=console,
-    #     transient=False
-    # ) as progress:
-    # task = progress.add_task(f"Processing {case}", total=len(nc_files))
-
-    with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+    with loky.ProcessPoolExecutor(max_workers=max_workers, timeout=120) as executor:
         future_tasks = [
             executor.submit(
                 open_compress_and_save_file, file, out_path_prefix, case, case_metadata
@@ -488,11 +484,11 @@ def concatenate_into_bands(ds: xr.Dataset) -> xr.Dataset:
     """
     bands_ds = xr.Dataset(coords=ds.coords)
 
-    bands_ds["DIC"] = xr.concat(
+    bands_ds["DIC_SURF"] = xr.concat(
         [ds["DIC_DELTA_SURF"], ds["DIC_SURF"]],
         dim=xr.DataArray(name="band", data=["delta", "experimental"], dims="band"),
     )
-    bands_ds["DIC_INTEGRATED"] = xr.concat(
+    bands_ds["DIC"] = xr.concat(
         [ds["DIC_DELTA_COLUMN_INTEGRATED"], ds["DIC_COLUMN_INTEGRATED"]],
         dim=xr.DataArray(name="band", data=["delta", "experimental"], dims="band"),
     )
@@ -509,10 +505,7 @@ def concatenate_into_bands(ds: xr.Dataset) -> xr.Dataset:
         dim=xr.DataArray(name="band", data=["delta", "experimental"], dims="band"),
     )
 
-    # notice we chunk along the band dimension
-    return bands_ds.isel(
-        z_t=0, missing_dims="warn"
-    )  # .chunk(band=1, nlat=384, nlon=320)
+    return bands_ds.isel(z_t=0, missing_dims="warn")
 
 
 def reshape_into_month_year(ds: xr.Dataset) -> xr.Dataset:
@@ -608,9 +601,7 @@ def _create_template_store2(
         ds = xr.Dataset()
 
         # Create dimension coordinates
-        ds["band"] = xr.DataArray(["delta", "experimental"], dims=["band"]).astype(
-            "U12"
-        )
+        ds["band"] = xr.DataArray(["delta", "experimental"], dims=["band"])
 
         ds["polygon_id"] = xr.DataArray(np.arange(690), dims="polygon_id").astype(
             "int32"
@@ -632,7 +623,7 @@ def _create_template_store2(
         ds["elapsed_time"] = xr.DataArray(
             existing_oae_pyramid[level].ds["elapsed_time"].data.compute(),
             dims=["month", "year"],
-        ).astype("float32")
+        ).astype("int32")
 
         ds = ds.set_coords(["elapsed_time"])
 
@@ -647,8 +638,7 @@ def _create_template_store2(
                 dims=existing_oae_pyramid[level].ds["DIC"].dims,
             )
 
-        # Set chunking for optimal performance
-        plevels[level] = ds.drop_vars(["dz"], errors="warn").chunk(
+        plevels[level] = ds.chunk(
             polygon_id=1, band=1, injection_date=1, month=1, year=-1, x=128, y=128
         )
 
@@ -661,7 +651,6 @@ def _create_template_store2(
     template = xr.DataTree.from_dict(plevels)
     template.attrs = existing_oae_pyramid.attrs
 
-    # Add metadata and encoding for zarr storage
     template = ndpyramid.utils.add_metadata_and_zarr_encoding(template, levels=levels)
 
     return template
@@ -743,6 +732,7 @@ def process_and_create_pyramid(
     injection_month: str,
     data_dir: str,
     store_path: str,
+    weights_store: str,
     levels: int = 2,
 ) -> None:
     """Process data and create visualization pyramid.
@@ -759,13 +749,15 @@ def process_and_create_pyramid(
         Path to the zarr store
     levels : int, default=2
         Number of pyramid levels to generate
+    weights_store : str
+        Path to the weights zarr store (if available)
     """
     try:
         path = get_nc_glob_pattern(data_dir, polygon_id, injection_month)
         console.print(f"Loading data from {path}", style="blue")
 
         with dask.config.set(
-            pool=concurrent.futures.ProcessPoolExecutor(max_workers=os.cpu_count())
+            pool=loky.ProcessPoolExecutor(max_workers=os.cpu_count() // 2, timeout=120)
         ):
             ds = xr.open_mfdataset(
                 path,
@@ -791,24 +783,38 @@ def process_and_create_pyramid(
                 month=1, year=-1, band=1, polygon_id=1, injection_date=1, x=128, y=128
             )
 
+            if fsspec.get_mapper(weights_store).fs.exists(weights_store):
+                console.print(
+                    f"Using weights from {weights_store} for regridding", style="blue"
+                )
+                weights = xr.open_datatree(weights_store, engine="zarr", chunks={})
+
+            else:
+                console.print(
+                    "No weights store provided or does not exist. "
+                    "Weights will be generated on-the-fly.",
+                    style="yellow",
+                )
+                weights = ndpyramid.regrid.generate_weights_pyramid(bands_ds, levels=2)
+                weights.to_zarr(
+                    weights_store, consolidated=True, zarr_format=2, mode="w"
+                )
+
             pyramid = ndpyramid.pyramid_regrid(
-                bands_ds.chunk(nlat=-1, nlon=-1),
+                bands_ds,
                 levels=levels,
                 projection="web-mercator",
                 parallel_weights=False,
                 other_chunks=other_chunks,
+                weights_pyramid=weights,
             )
 
             pyramid = dask.optimize(pyramid)[0]
 
             console.print(f"Saving pyramid to {store_path}", style="blue")
-            console.print(f"The pyramid datatree: {pyramid}", style="blue")
+            # console.print(f"The pyramid datatree: {pyramid}", style="blue")
             pyramid.to_zarr(store_path, region="auto", mode="r+")
 
-            console.print(
-                f"Finished processing polygon_id={polygon_id}, injection_month={injection_month}",
-                style="green",
-            )
             return pyramid
 
     except Exception as exc:
@@ -822,6 +828,12 @@ def process_and_create_pyramid(
 @app.command()
 def build_vis_pyramid(
     output_store: str = typer.Argument(..., help="Path to the output zarr store"),
+    weights_store: Optional[str] = typer.Option(
+        f"{os.environ['SCRATCH']}/weights.zarr",
+        "--weights-store",
+        "-w",
+        help="Path to the weights zarr store (optional)",
+    ),
     polygon_ids: Optional[list[int]] = typer.Option(
         None, "--polygon-ids", "-p", help="Specific polygon IDs to process"
     ),
@@ -877,49 +889,32 @@ def build_vis_pyramid(
             f"Processing {len(padded_injection_months)} injection months", style="blue"
         )
 
-        total_tasks = len(padded_polygon_ids) * len(padded_injection_months)
-
         # Prepare all tasks
         tasks = []
         for polygon_id in padded_polygon_ids:
             for injection_month in padded_injection_months:
                 tasks.append((polygon_id, injection_month))
 
-        with Progress(
-            TextColumn("[bold blue]{task.description}"),
-            BarColumn(),
-            TaskProgressColumn(),
-            console=console,
-        ) as progress:
-            main_task = progress.add_task(
-                "Building visualization pyramids", total=total_tasks
-            )
-
-            for polygon_id, injection_month in tasks:
-                progress.add_task(
-                    f"Processing {polygon_id}/{injection_month}",
-                    total=1,
-                    start=False,
+        for polygon_id, injection_month in tasks:
+            try:
+                memory.cache(process_and_create_pyramid)(
+                    polygon_id=polygon_id,
+                    injection_month=injection_month,
+                    data_dir=data_dir,
+                    store_path=output_store,
+                    weights_store=weights_store,
+                    levels=levels,
                 )
-                try:
-                    memory.cache(process_and_create_pyramid)(
-                        polygon_id=polygon_id,
-                        injection_month=injection_month,
-                        data_dir=data_dir,
-                        store_path=output_store,
-                        levels=levels,
-                    )
-                    progress.update(
-                        main_task,
-                        description=f"Completed {polygon_id}/{injection_month}",
-                        advance=1,
-                    )
+                console.print(
+                    f"Finished processing polygon_id={polygon_id}, injection_month={injection_month}",
+                    style="green",
+                )
 
-                except Exception:
-                    console.print(
-                        f"[bold red]Error processing {polygon_id}/{injection_month}: "
-                        f"{traceback.format_exc()}[/bold red]"
-                    )
+            except Exception:
+                console.print(
+                    f"[bold red]Error processing {polygon_id}/{injection_month}: "
+                    f"{traceback.format_exc()}[/bold red]"
+                )
 
         console.print(
             "[bold green]Successfully built all visualization pyramids![/bold green]"
@@ -939,7 +934,7 @@ def create_template_vis_pyramid(
         help="Output path for the template visualization store",
     ),
     variables: list[str] = typer.Option(
-        ["DIC", "DIC_INTEGRATED", "PH", "FG", "pCO2SURF"],
+        ["DIC", "DIC_SURF", "PH", "FG", "pCO2SURF"],
         "--variables",
         "-v",
         help="List of variables to include in the template",
@@ -1018,16 +1013,11 @@ def list_cases(
         if limit and len(df) > limit:
             df = df.head(limit)
 
-        # Create a nice table
         table = Table(title="Available Cases")
 
-        # Add columns for important metadata
         table.add_column("Case", style="cyan", no_wrap=True)
         table.add_column("Polygon ID", style="magenta")
-        # table.add_column("Start Date", style="green")
-        # table.add_column("End Date", style="green")
 
-        # Add rows
         for case, row in df.iterrows():
             table.add_row(
                 case,
