@@ -64,12 +64,12 @@ def integrate_column_mol(
     a = (var * depth_m).sum(dim="z_t")  # mmol/m²
     b = var.isel(z_t=0).squeeze() * ssh_m  # mmol/m²
 
-    # Convert from mmol/m² to mol/m²
-    result = (a + b) * 1e-3  # mol/m²
+    # leave conversion from mmol/m² to mol/m² to the frontend
+    result = a + b
 
     result.attrs.update(
         {
-            "units": "mol/m^2",
+            "units": "mmol/m^2",
             "long_name": f"Column integrated {var.attrs.get('long_name', 'variable')}",
         }
     )
@@ -730,7 +730,7 @@ def build_pyramid(
 
 @app.command()
 def create_template_cumulative_fg_co2_percent_store(
-    output_path: str = typer.Option(
+    output_store: str = typer.Option(
         config.cumulative_fg_co2_percent_store_path,
         help="Output path for the template visualization store",
     ),
@@ -743,12 +743,12 @@ def create_template_cumulative_fg_co2_percent_store(
         template = _create_template_cumulative_fg_co2_percent_store()
 
         template.to_zarr(
-            output_path, compute=False, zarr_format=2, consolidated=True, mode="w"
+            output_store, compute=False, zarr_format=2, consolidated=True, mode="w"
         )
 
-        print_template_cumulative_fg_co2_percent_store(output_path)
+        print_template_cumulative_fg_co2_percent_store(output_store)
 
-        console.print(f"Template saved to {output_path}", style="green")
+        console.print(f"Template saved to {output_store}", style="green")
 
     except Exception as _:
         console.print(
@@ -759,7 +759,7 @@ def create_template_cumulative_fg_co2_percent_store(
 
 @app.command()
 def create_template_store1(
-    output_path: str = typer.Option(
+    output_store: str = typer.Option(
         config.store_1_path,
         help="Output path for the template visualization store",
     ),
@@ -770,12 +770,12 @@ def create_template_store1(
         template = _create_template_store1()
 
         template.to_zarr(
-            output_path, compute=False, zarr_format=2, consolidated=True, mode="w"
+            output_store, compute=False, zarr_format=2, consolidated=True, mode="w"
         )
 
-        print_template_vis_store1(output_path)
+        print_template_vis_store1(output_store)
 
-        console.print(f"Template saved to {output_path}", style="green")
+        console.print(f"Template saved to {output_store}", style="green")
 
     except Exception as _:
         console.print(
@@ -786,7 +786,7 @@ def create_template_store1(
 
 @app.command()
 def create_template_store2(
-    output_path: str = typer.Option(
+    output_store: str = typer.Option(
         config.store_2_path,
         help="Output path for the template visualization store",
     ),
@@ -819,15 +819,15 @@ def create_template_store2(
         console.print(f"Created template with {len(template)} levels", style="green")
         console.print(template)
 
-        console.print(f"Saving to {output_path}", style="blue")
+        console.print(f"Saving to {output_store}", style="blue")
         template.to_zarr(
-            output_path, compute=False, zarr_format=2, consolidated=True, mode="w"
+            output_store, compute=False, zarr_format=2, consolidated=True, mode="w"
         )
         template.close()
 
-        print_template_vis_store2(output_path)
+        print_template_vis_store2(output_store)
 
-        console.print(f"Template saved to {output_path}", style="green")
+        console.print(f"Template saved to {output_store}", style="green")
         console.print("Template validation complete", style="green")
         console.print("All done!", style="green")
 
