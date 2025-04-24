@@ -6,8 +6,12 @@ import traceback
 import research_data
 import typer
 import vis_pyramid
+from dask.diagnostics.progress import ProgressBar
 from rich.console import Console
 from rich.table import Table
+
+pbar = ProgressBar()
+pbar.register()
 
 # Create app with unified CLI for both modules
 app = typer.Typer(

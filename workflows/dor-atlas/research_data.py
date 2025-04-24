@@ -19,6 +19,8 @@ from rich.console import Console
 from rich.progress import BarColumn, Progress, TaskProgressColumn, TextColumn
 from rich.table import Table
 
+
+
 # Set up console for nice formatting
 console = Console()
 

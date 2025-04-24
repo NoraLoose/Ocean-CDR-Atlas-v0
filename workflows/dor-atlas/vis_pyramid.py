@@ -2,6 +2,7 @@ import os
 import traceback
 from typing import Optional
 
+import cftime
 import dask
 import dask.array as dsa
 import dask.config
@@ -35,12 +36,48 @@ def setup_memory(cache_dir):
     return memory
 
 
-def integrate_column(var: xr.DataArray, depth_element: xr.DataArray) -> xr.DataArray:
-    """Integrate a variable over the vertical column."""
-    return (var * depth_element).sum(dim="z_t")
+def integrate_column_mol(
+    var: xr.DataArray, depth_element: xr.DataArray, ssh: xr.DataArray
+) -> xr.DataArray:
+    """
+    Integrate a variable over the vertical column and convert to mol/m².
+
+    Parameters:
+    -----------
+    var : xr.DataArray
+        Variable to integrate with units of mmol/m³
+    depth_element : xr.DataArray
+        Thickness of each layer with units of centimeters
+    ssh : xr.DataArray
+        Sea Surface Height with units of centimeters
+
+    Returns:
+    --------
+    xr.DataArray
+        Integrated variable with units of mol/m²
+    """
+    # convert depth_element and ssh from cm to m
+    depth_m = depth_element * 0.01  # cm to m
+    ssh_m = ssh * 0.01  # cm to m
+
+    # integrate over depth
+    a = (var * depth_m).sum(dim="z_t")  # mmol/m²
+    b = var.isel(z_t=0).squeeze() * ssh_m  # mmol/m²
+
+    # Convert from mmol/m² to mol/m²
+    result = (a + b) * 1e-3  # mol/m²
+
+    result.attrs.update(
+        {
+            "units": "mol/m^2",
+            "long_name": f"Column integrated {var.attrs.get('long_name', 'variable')}",
+        }
+    )
+
+    return result
 
 
-def reduction(ds):
+def reduction(ds: xr.Dataset, ssh: xr.DataArray) -> xr.Dataset:
     """Apply reduction operations to the dataset."""
     with xr.set_options(keep_attrs=True):
         dic_surf = ds.DIC.isel(z_t=0)
@@ -52,9 +89,9 @@ def reduction(ds):
 
         fg_co2_delta_surf = ds.FG_CO2 - ds.FG_ALT_CO2
 
-        dic_column_integrated = integrate_column(ds.DIC, ds["dz"] * 1e-3)
-        dic_delta_column_integrated = dic_column_integrated - integrate_column(
-            ds.DIC_ALT_CO2, ds["dz"] * 1e-3
+        dic_column_integrated = integrate_column_mol(ds.DIC, ds["dz"], ssh)
+        dic_delta_column_integrated = dic_column_integrated - integrate_column_mol(
+            ds.DIC_ALT_CO2, ds["dz"], ssh
         )
 
     dso = (
@@ -433,6 +470,70 @@ def get_nc_glob_pattern(data_dir: str, polygon_id: str, injection_month: str) ->
     return f"{data_dir}/{polygon_id}/{injection_month}/*.nc"
 
 
+def load_ssh_data(injection_month: str) -> xr.DataArray:
+    """Load SSH data for a given injection month."""
+    ssh_path = "/global/cfs/cdirs/m4746/Datasets/SMYLE-FOSI/ocn/proc/tseries/month_1/g.e22.GOMIPECOIAF_JRA-1p4-2018.TL319_g17.SMYLE.005.pop.h.SSH.030601-036812.nc"
+    ds = xr.open_dataset(ssh_path, chunks={}, decode_timedelta=True)
+
+    if int(injection_month) == 1:
+        subset_slice = slice("0347-01", "0361-12")
+    elif int(injection_month) == 4:
+        subset_slice = slice("0347-04", "0362-03")
+    elif int(injection_month) == 7:
+        subset_slice = slice("0347-07", "0362-06")
+    elif int(injection_month) == 10:
+        subset_slice = slice("0347-10", "0362-09")
+    else:
+        raise ValueError(f"Invalid injection month: {injection_month}")
+    ds = ds.sel(time=subset_slice)
+
+    year = ds.time.dt.year
+    month = ds.time.dt.month
+
+    # Compute current year based on formula
+    current_year = 1999 + year - int("0347")  # Equivalent to 1999 + year - 347
+
+    # Create DataArray of datetime objects
+    current_time = xr.DataArray(
+        [
+            cftime.datetime(y, m, 1, calendar="noleap", has_year_zero=True)
+            for y, m in zip(current_year, month)
+        ],
+        dims="time",
+        name="current_time",
+    )
+
+    injection_date_coord = xr.DataArray(
+        data=[
+            cftime.DatetimeNoLeap.strptime(
+                f"1999-{injection_month}",
+                "%Y-%m",
+                calendar="noleap",
+                has_year_zero=True,
+            )
+        ],
+        dims=["injection_date"],
+        attrs={"long_name": "injection date"},
+    )
+
+    ds = (
+        ds.assign_coords(
+            injection_date=injection_date_coord,
+            elapsed_time=(current_time - injection_date_coord).squeeze(),
+        )
+        .drop_indexes("time")
+        .swap_dims(time="elapsed_time")
+        .drop_vars("time")
+    )
+
+    console.print(
+        f"Loaded SSH data for injection month {ds.injection_date} \ntime_slice: {subset_slice}",
+        style="blue",
+    )
+
+    return ds["SSH"]
+
+
 def process_and_create_pyramid(
     polygon_id: str,
     injection_month: str,
@@ -462,8 +563,10 @@ def process_and_create_pyramid(
             ds = dask.optimize(ds)[0]
 
             console.print("Processing dataset through reduction pipeline", style="blue")
+            ssh = load_ssh_data(injection_month)
+
             bands_ds = (
-                ds.pipe(reduction)
+                ds.pipe(reduction, ssh)
                 .pipe(concatenate_into_bands)
                 .pipe(reshape_into_month_year)
             )
@@ -524,8 +627,10 @@ def main(ctx: typer.Context):
 
 
 @app.command()
-def build_vis_pyramid(
-    output_store: str = typer.Argument(..., help="Path to the output zarr store"),
+def build_pyramid(
+    output_store: str = typer.Option(
+        config.store_2_path, help="Path to the output zarr store"
+    ),
     weights_store: Optional[str] = typer.Option(
         f"{os.environ['SCRATCH']}/weights.zarr",
         "--weights-store",
