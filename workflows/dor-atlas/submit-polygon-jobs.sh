@@ -3,7 +3,7 @@
 # Set default values
 START_POLYGON=0
 END_POLYGON=689
-WAIT_SECONDS=60
+WAIT_SECONDS=20
 
 # Flag to track if we're in the process of terminating
 TERMINATING=0
@@ -79,7 +79,7 @@ if [ "$START_POLYGON" -gt "$END_POLYGON" ]; then
 fi
 
 # Create a log directory
-LOG_DIR="$SCRATCH/polygon-jobs-logs"
+LOG_DIR="$SCRATCH/polygon-jobs-logs-fg-co2-excess"
 mkdir -p $LOG_DIR
 
 echo "===== QoS-Aware Polygon Job Submission ====="
@@ -93,12 +93,12 @@ echo "=========================================="
 get_max_jobs_allowed() {
     # Try to extract the max jobs from sacctmgr
     # If this doesn't work in your environment, you might need to hardcode the value
-    local qos_info=$(sacctmgr show qos regular format=MaxSubmitJobsPerUser -n 2>/dev/null)
+    local qos_info=$(sacctmgr show qos debug format=MaxSubmitJobsPerUser -n 2>/dev/null)
     local max_jobs=$(echo "$qos_info" | tr -d ' ')
     
     # If we couldn't get the limit, default to 3 (which seems to be your limit based on the error)
     if [[ -z "$max_jobs" || "$max_jobs" == "-1" ]]; then
-        max_jobs=3
+        max_jobs=10
     fi
     
     echo $max_jobs
@@ -148,6 +148,7 @@ submit_polygon_job() {
     # Replace the python command to include the correct polygon ID
     sed -i "s/python research_grade_data\.py process-all --polygon 1/python research_grade_data\.py process-all --polygon ${polygon_id}/" $temp_script
     sed -i "s/python dor_cli\.py vis build-pyramid -p 1/python dor_cli\.py vis build-pyramid -p ${polygon_id}/" $temp_script
+    sed -i "s/python process_fg_co2_excess\.py -p 1/python process_fg_co2_excess\.py -p ${polygon_id}/" $temp_script
     
     # Submit the job and capture both job ID and error messages
     submit_output=$(sbatch $temp_script 2>&1)

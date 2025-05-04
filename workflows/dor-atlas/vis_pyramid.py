@@ -470,9 +470,9 @@ def get_nc_glob_pattern(data_dir: str, polygon_id: str, injection_month: str) ->
     return f"{data_dir}/{polygon_id}/{injection_month}/*.nc"
 
 
-def load_ssh_data(injection_month: str) -> xr.DataArray:
+def load_ssh_data(injection_month: str, ssh_path:str = "/global/cfs/cdirs/m4746/Datasets/SMYLE-FOSI/ocn/proc/tseries/month_1/g.e22.GOMIPECOIAF_JRA-1p4-2018.TL319_g17.SMYLE.005.pop.h.SSH.030601-036812.nc") -> xr.DataArray:
     """Load SSH data for a given injection month."""
-    ssh_path = "/global/cfs/cdirs/m4746/Datasets/SMYLE-FOSI/ocn/proc/tseries/month_1/g.e22.GOMIPECOIAF_JRA-1p4-2018.TL319_g17.SMYLE.005.pop.h.SSH.030601-036812.nc"
+
     ds = xr.open_dataset(ssh_path, chunks={}, decode_timedelta=True)
 
     if int(injection_month) == 1:

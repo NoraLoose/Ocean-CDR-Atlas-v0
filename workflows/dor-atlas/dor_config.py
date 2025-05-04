@@ -58,7 +58,11 @@ class DORConfig(pydantic_settings.BaseSettings):
     @functools.cached_property
     def compressed_data_dir(self) -> pathlib.Path:
         """Get the compressed data directory and ensure it exists."""
-        out_dir = pathlib.Path(self.parent_data_dir) / "research-grade-compressed"
+        out_dir = (
+            pathlib.Path(self.parent_data_dir)
+            / "research-grade-compressed"
+            / "experiments"
+        )
         out_dir.mkdir(parents=True, exist_ok=True)
         return out_dir
 

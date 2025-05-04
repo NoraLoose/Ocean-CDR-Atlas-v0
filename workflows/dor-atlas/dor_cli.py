@@ -3,7 +3,7 @@ import sys
 import traceback
 
 # Import our modules
-import research_data
+import research_grade_data
 import typer
 import vis_pyramid
 from dask.diagnostics.progress import ProgressBar
@@ -28,13 +28,13 @@ try:
 
 except ImportError:
     typer.echo(
-        "Error: Missing data_config module. Please ensure it's in your PYTHONPATH."
+        "Error: Missing dor_config module. Please ensure it's in your PYTHONPATH."
     )
     sys.exit(1)
 
 # Add the subcommands from both modules
 app.add_typer(
-    research_data.app, name="research-data", help="Process research-grade data"
+    research_grade_data.app, name="research-data", help="Process research-grade data"
 )
 app.add_typer(vis_pyramid.app, name="vis", help="Generate visualization pyramids")
 
