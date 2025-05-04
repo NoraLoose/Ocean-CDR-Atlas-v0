@@ -326,7 +326,7 @@ def process_single_case_no_dask(
     verbose: bool = False,
 ):
     """Process a single case using ProcessPoolExecutor."""
-    nc_files = glob_nc_files(base_path=data_dir_path, case=case)[:2]
+    nc_files = glob_nc_files(base_path=data_dir_path, case=case)
     results = []
 
     if not max_workers:
