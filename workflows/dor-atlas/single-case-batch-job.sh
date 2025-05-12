@@ -32,7 +32,7 @@ cd $HOME/Ocean-CDR-Atlas-v0/workflows/dor-atlas
 
 # Run the Python script with appropriate parameters
 echo "Starting data processing at $(date)"
-time python research_grade_data.py process-all --polygon 1
+time python research_grade_data.py process-all-cases --polygon 1
 # time python dor_cli.py vis build-pyramid -p 1 --output-store s3://carbonplan-dor-efficiency/v2/store2.zarr/
 # time python process_fg_co2_excess.py -p 1
 

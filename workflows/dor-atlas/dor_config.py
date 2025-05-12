@@ -20,14 +20,14 @@ class DORConfig(pydantic_settings.BaseSettings):
     )
 
     store_1_path: str = pydantic.Field(
-        default=f"{os.environ.get('SCRATCH', '')}/test/store1b.zarr"
+        default=f"{os.environ.get('SCRATCH', '')}/dor/store1b.zarr"
     )
     store_2_path: str = pydantic.Field(
-        default=f"{os.environ.get('SCRATCH', '')}/test/store2.zarr"
+        default=f"{os.environ.get('SCRATCH', '')}/dor/store2.zarr"
     )
 
     cumulative_fg_co2_percent_store_path: str = pydantic.Field(
-        default=f"{os.environ.get('SCRATCH', '')}/test/cumulative_FG_CO2_percent.zarr"
+        default=f"{os.environ.get('SCRATCH', '')}/dor/cumulative_FG_CO2_percent.zarr"
     )
 
     class Config:

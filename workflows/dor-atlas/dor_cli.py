@@ -2,7 +2,6 @@ import pathlib
 import sys
 import traceback
 
-# Import our modules
 import research_grade_data
 import typer
 import vis_pyramid
@@ -86,7 +85,7 @@ def setup_environment():
         console.print(table)
 
         # Check for required modules
-        modules = ["atlas", "pop_tools", "variables", "ndpyramid"]
+        modules = ["atlas", "pop_tools", "ndpyramid"]
         missing_modules = []
 
         for module in modules:

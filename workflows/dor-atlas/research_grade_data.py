@@ -11,15 +11,10 @@ import numpy as np
 import pandas as pd
 import pop_tools
 import typer
-import variables
 import xarray as xr
-from rich.console import Console
+from common import COORDS, console
 from rich.progress import BarColumn, Progress, TaskProgressColumn, TextColumn
 from rich.table import Table
-
-# Set up console for nice formatting
-console = Console()
-
 
 # Append parent directory to path to import atlas
 parent_dir = pathlib.Path.cwd().parent
@@ -64,7 +59,7 @@ def get_cases_df():
 
 def set_coords(ds: xr.Dataset) -> xr.Dataset:
     """Set coordinates on the dataset."""
-    return ds.set_coords(variables.COORDS)
+    return ds.set_coords(COORDS)
 
 
 def get_year_and_month(ds):
@@ -330,7 +325,7 @@ def process_single_case_no_dask(
     results = []
 
     if not max_workers:
-        max_workers = os.cpu_count()
+        max_workers = os.cpu_count() // 2
 
     with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
         future_tasks = [
@@ -474,7 +469,7 @@ def process_case(
 
 
 @app.command()
-def process_all(
+def process_all_cases(
     output_dir: Optional[str] = typer.Option(
         None, "--output-dir", "-o", help="Output directory for processed files"
     ),
@@ -482,7 +477,7 @@ def process_all(
         None, "--data-dir", "-d", help="Directory containing input data files"
     ),
     polygon_filter: Optional[int] = typer.Option(
-        None, "--polygon", "-p", help="Filter by polygon ID"
+        None, "--polygon", "--polygon-id", "-p", help="Filter by polygon ID"
     ),
     max_cases: int = typer.Option(
         None, "--max-cases", help="Maximum number of cases to process"
