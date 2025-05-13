@@ -162,7 +162,7 @@ To generate visualization pyramids, you can use the `vis` command in the CLI too
 ## Joblib Caching 
 
 
-The code base includes an implementation for a caching mechanism using []`joblib.Memory`](https://joblib.readthedocs.io/en/stable/generated/joblib.Memory.html) that can significantly improve performance by avoiding redundant computations. Here's how to leverage this feature effectively:
+The code base includes an implementation for a caching mechanism using [`joblib.Memory`](https://joblib.readthedocs.io/en/stable/generated/joblib.Memory.html) that can significantly improve performance by avoiding redundant computations. Here's how to leverage this feature effectively:
 
 The caching system works by:
 
@@ -187,3 +187,25 @@ When a function is wrapped with `memory.cache()`, joblib:
 ## zarr v2 vs v3 
 
 - store 2b requires using zarr v2 because of the string encoding discrepancy introduced by zarr v3
+
+
+## Transfering data from Perlmutter's filesytem to Source Coop Bucket in AWS
+
+To transfer data from Perlmutter's filesystem to a Source Coop bucket in AWS, you can use the `s5cmd sync` command. This command allows you to synchronize files between your local filesystem and the S3 bucket. The `s5cmd` tool will be installed in the `dor` conda environment.
+
+To transfer files, you can use the following command:
+
+```bash
+s5cmd --endpoint-url https://data.source.coopsync /path/to/local/directory s3://your-bucket-name/path/to/destination
+```
+Replace `/path/to/local/directory` with the path to the local directory you want to transfer, and `s3://your-bucket-name/path/to/destination` with the S3 bucket and destination path.
+
+Note that you will need to configure your AWS credentials to allow access to the S3 bucket. You can do this by generating API keys from `https://source.coop/YOUR_USERNAME/manage` and running the following command:
+
+```bash
+aws configure
+```
+
+This command will prompt you for your AWS Access Key ID, Secret Access Key, and default region. Make sure to enter the correct values for your Source Coop account. Once you have configured your AWS credentials, you can use the `s5cmd` command to transfer files to the S3 bucket.
+
+
