@@ -347,21 +347,21 @@ def _create_template_cumulative_fg_co2_percent_store() -> xr.Dataset:
     chunks_encoding_per_variable = {
         "FG_CO2_percent_cumulative": {
             "chunks": {
-                "polygon_id": 690,
-                "intervention_date": 1,
+                "polygon_id": 1,
+                "intervention_month": 1,
                 "elapsed_time": 180,
                 "dist2center": 3,
             }
         },
-        "polygon_id": {"chunks": {"polygon_id": 690}},
-        "intervention_date": {"chunks": {"intervention_date": 1}},
+        "polygon_id": {"chunks": {"polygon_id": 1}},
+        "intervention_month": {"chunks": {"intervention_month": 1}},
         "elapsed_time": {"chunks": {"elapsed_time": 180}},
         "dist2center": {"chunks": {"dist2center": 3}},
     }
     sizes_all_dims = {
         "elapsed_time": 180,
         "polygon_id": 690,
-        "intervention_date": 4,
+        "intervention_month": 4,
         "dist2center": 3,
     }
 
@@ -374,10 +374,10 @@ def _create_template_cumulative_fg_co2_percent_store() -> xr.Dataset:
         dims=["polygon_id"],
         attrs={"long_name": "Polygon ID"},
     ).astype("int32")
-    placeholder["intervention_date"] = xr.DataArray(
+    placeholder["intervention_month"] = xr.DataArray(
         np.array([1, 4, 7, 10]),
-        dims=["intervention_date"],
-        attrs={"long_name": "intervention date", "units": "month of 1999"},
+        dims=["intervention_month"],
+        attrs={"long_name": "intervention month", "units": "month of 1999"},
     ).astype("int32")
 
     placeholder["dist2center"] = xr.DataArray(
@@ -395,7 +395,7 @@ def _create_template_cumulative_fg_co2_percent_store() -> xr.Dataset:
     var_shape = tuple(var_sizes.values())
     ordered_var_dims = list(var_sizes.keys())
 
-    placeholder["cumulative_fg_co2_percent"] = xr.DataArray(
+    placeholder["FG_CO2_percent_cumulative"] = xr.DataArray(
         dsa.empty(
             shape=var_shape,
             chunks=var_chunks,
@@ -405,8 +405,8 @@ def _create_template_cumulative_fg_co2_percent_store() -> xr.Dataset:
     )
     placeholder = (
         placeholder.pipe(set_compression_encoding)
-        .chunk(polygon_id=-1, intervention_date=1, elapsed_time=-1, dist2center=-1)
-        .transpose("elapsed_time", "polygon_id", "intervention_date", "dist2center")
+        .chunk(polygon_id=1, intervention_month=1, elapsed_time=-1, dist2center=-1)
+        .transpose("elapsed_time", "polygon_id", "intervention_month", "dist2center")
     )
     placeholder.attrs["long_name"] = "Cumulative FG CO2 percent"
     placeholder.attrs["units"] = "percent"
@@ -939,10 +939,224 @@ def populate_store2(
         raise typer.Exit(1)
 
 
+def _compute_cumulative_FG_CO2_ring(
+    dset: xr.Dataset, bin_edges: np.ndarray, rings: np.ndarray
+) -> xr.Dataset:
+    """Compute cumulative FG CO2 by ring, with Dask support for parallel processing."""
+
+    FG_CO2_excess_area_time = (
+        (dset.FG_CO2_excess * dset.TAREA * dset.time_delta) / 1e6 * 86400
+    )  # mmol
+
+    rings_da = dsa.from_array(rings, chunks=-1)
+
+    total_FG_CO2 = FG_CO2_excess_area_time.sum(dim=["elapsed_time", "nlat", "nlon"])
+
+    num_time = FG_CO2_excess_area_time.sizes["elapsed_time"]
+    num_rings = len(bin_edges)
+
+    result = []
+
+    # Process each ring
+    for idx in range(num_rings):
+        ring_mask = xr.where(rings_da == idx + 1, 1, 0)
+
+        # Calculate ring values and store in list
+        ring_values = (FG_CO2_excess_area_time * ring_mask).sum(dim=["nlat", "nlon"])
+        result.append(ring_values)
+
+    # Combine results along a new dimension
+    FG_CO2_rings = xr.concat(
+        result, dim=xr.DataArray(range(num_rings), dims="dist2center")
+    )
+    FG_CO2_rings = FG_CO2_rings.transpose("elapsed_time", "dist2center", ...)
+
+    FG_CO2_rings_per = FG_CO2_rings / total_FG_CO2
+    all_rs = np.arange(len(FG_CO2_rings_per.dist2center.values))
+    stacks = []
+    for r in all_rs:
+        # Sum individual histograms across the time axis into groups
+        sum_over_time = (
+            FG_CO2_rings_per.isel(dist2center=slice(0, r + 1)).sum(dim="dist2center")
+            * 100
+        )
+
+        # Compute the cumulative sum
+        cumulative_sum = sum_over_time.cumsum(dim="elapsed_time")
+        stacks.append(cumulative_sum)
+
+    data = xr.concat(stacks, dim="dist2center")
+    ds = xr.Dataset()
+    ds["FG_CO2_percent_cumulative"] = data.reset_coords(drop=True).astype("float32")
+    ds["elapsed_time"] = np.arange(num_time).astype("int32")
+    ds["dist2center"] = bin_edges
+    ds = ds.rename({"intervention_date": "intervention_month"}).chunk(
+        polygon_id=1, elapsed_time=-1, dist2center=-1, intervention_month=1
+    )
+    ds["intervention_month"] = ds.intervention_month.dt.month.astype("int32")
+
+    return ds.transpose(
+        "elapsed_time", "polygon_id", "intervention_month", "dist2center", ...
+    )
+
+
+def _process_one_polygon_single_season(
+    polygon_id: str,
+    intervention_month: str,
+    pre_computed_fg_co2_excess: str,
+    output_store: str,
+    bin_edges: np.ndarray,
+    rings: np.ndarray,
+):
+    """Process one polygon for a single season."""
+
+    path = (
+        pathlib.Path(pre_computed_fg_co2_excess)
+        / f"{polygon_id}-{intervention_month}.zarr"
+    )
+    ds = xr.open_dataset(path, engine="zarr", chunks={}, decode_timedelta=False)
+
+    data = _compute_cumulative_FG_CO2_ring(
+        dset=ds,
+        bin_edges=bin_edges,
+        rings=rings,
+    )
+    values = np.array([500, 1000, 2000]) * 1_000  # conversion to meters
+    data = data.sel(dist2center=values, method="nearest")
+
+    data.to_zarr(
+        output_store,
+        region="auto",
+    )
+    console.print(
+        f"Saved {polygon_id}/{intervention_month} to {output_store}", style="green"
+    )
+
+
+def load_cluster_centers_and_masks():
+    """Load cluster centers from files based on region identifiers in file paths."""
+    import pooch
+
+    file_paths = pooch.retrieve(
+        url="https://storage.googleapis.com/oae-dor-global-efficiency-mtyka/data.zip",
+        known_hash="md5:4251a7b2bf023c282bccce6cdef976d7",
+        processor=pooch.Unzip(
+            members=[
+                "data/polygon_data/Pacific_final_cluster_centers.npy",
+                "data/polygon_data/Atlantic_final_cluster_centers.npy",
+                "data/polygon_data/South_final_cluster_centers_120EEZ_180openocean.npy",
+                "data/polygon_data/Southern_Ocean_final_cluster_centers.npy",
+                "data/polygon_data/Pacific_final_polygon_mask.npy",
+                "data/polygon_data/Atlantic_final_polygon_mask.npy",
+                "data/polygon_data/South_final_polygon_mask_120EEZ_180openocean.npy",
+                "data/polygon_data/Southern_Ocean_final_polygon_mask.npy",
+            ]
+        ),
+    )
+
+    # Define region keys and their file identifiers
+    region_identifiers = {
+        "North_Atlantic_basin": "Atlantic",
+        "North_Pacific_basin": "Pacific_final_cluster_centers",
+        "South": "South_final",
+        "Southern_Ocean": "Southern_Ocean",
+    }
+
+    # Initialize dictionary to store cluster centers by region
+    cluster_centers = {region: None for region in region_identifiers}
+    cluster_masks = {region: None for region in region_identifiers}
+
+    # Load cluster centers for each region
+    for path in file_paths:
+        for region, identifier in region_identifiers.items():
+            if "center" in path and identifier in path:
+                cluster_centers[region] = np.load(path, allow_pickle=True)
+                break
+            elif "mask" in path and identifier in path:
+                cluster_masks[region] = np.load(path, allow_pickle=True)
+                break
+
+    return cluster_centers, cluster_masks
+
+
+def calculate_distance(target, grid):
+    import gsw
+
+    tlong = grid.TLONG.values
+    tlat = grid.TLAT.values
+    n, m = tlong.shape
+    distance = np.zeros_like(tlong)
+    for idx in range(n):
+        for idy in range(m):
+            distance[idx, idy] = gsw.distance(
+                [tlong[idx, idy], target[0]], [tlat[idx, idy], target[1]]
+            )
+    return distance
+
+
+def make_rings(dist, num_rings: int = 100):
+    """
+    Return ring matrix, assign each grid point to a certain ring
+    """
+    bin_edges = np.arange(0, 4100 * 1e3, 50 * 1e3)
+    # use digitize to assign each point to a ring
+    rings = np.digitize(dist, bin_edges, right=True)
+    return bin_edges, rings
+
+
 @app.command()
-def populate_store3():
+def populate_store3(
+    polygon_id: int = typer.Option(
+        0, "-p", help="Polygon ID to process (default: 000)"
+    ),
+    pre_computed_fg_co2_excess: str = typer.Option(
+        "/pscratch/sd/a/abanihi/dor/fg-co2-excess/"
+    ),
+    output_store: str = typer.Option(
+        config.cumulative_fg_co2_percent_store_path,
+        help="Path to the output zarr store",
+    ),
+):
     """Populate the cumulative FG CO2 percent store."""
-    ...
+
+    import pop_tools
+    from dor_cli import setup_directories
+
+    dirs = setup_directories()
+    memory = setup_memory(dirs["joblib_cache_dir"])
+
+    grid = pop_tools.get_grid("POP_gx1v7")
+    cluster_centers, cluster_masks = load_cluster_centers_and_masks()
+    df = get_cases_df()
+    case_metadata = df[df.polygon_master == polygon_id].iloc[0]
+    original_polygon_id = int(case_metadata.polygon)
+    region = case_metadata.basin
+    centers = cluster_centers[region]
+    distances = calculate_distance(centers[original_polygon_id], grid)
+    bin_edges, rings = make_rings(distances)
+
+    padded_polygon_id = f"{polygon_id:03d}"
+    console.print(f"Processing polygon ID: {padded_polygon_id}", style="blue")
+
+    for padded_intervention_month in generate_padded_months([1, 4, 7, 10]):
+        console.print(
+            f"Processing intervention month: {padded_intervention_month}", style="blue"
+        )
+        try:
+            func = memory.cache(_process_one_polygon_single_season)
+            func(
+                polygon_id=padded_polygon_id,
+                intervention_month=padded_intervention_month,
+                pre_computed_fg_co2_excess=pre_computed_fg_co2_excess,
+                output_store=output_store,
+                bin_edges=bin_edges,
+                rings=rings,
+            )
+        except Exception:
+            console.print(
+                f"[bold red]Error processing {padded_polygon_id}/{padded_intervention_month}: "
+                f"{traceback.format_exc()}[/bold red]"
+            )
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@
 ## Environment Setup
 
 To set up the environment for the Ocean CDR Atlas, follow these steps:
+
 1. **Clone the Repository**: 
    ```bash
    git clone https://github.com/CWorthy-ocean/Ocean-CDR-Atlas-v0

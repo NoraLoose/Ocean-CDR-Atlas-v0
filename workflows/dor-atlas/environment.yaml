@@ -19,6 +19,7 @@ dependencies:
     - ndpyramid
     - netcdf4
     - pip
+    - pooch
     - pop-tools
     - pre-commit
     - pydantic
