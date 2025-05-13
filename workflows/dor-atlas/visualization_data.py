@@ -1152,6 +1152,10 @@ def populate_store3(
                 bin_edges=bin_edges,
                 rings=rings,
             )
+            console.print(
+                f"Finished processing {padded_polygon_id}/{padded_intervention_month}",
+                style="green",
+            )
         except Exception:
             console.print(
                 f"[bold red]Error processing {padded_polygon_id}/{padded_intervention_month}: "
