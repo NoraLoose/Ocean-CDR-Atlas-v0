@@ -6,244 +6,183 @@
 To set up the environment for the Ocean CDR Atlas, follow these steps:
 1. **Clone the Repository**: 
    ```bash
-   git clone
+   git clone https://github.com/CWorthy-ocean/Ocean-CDR-Atlas-v0
    ```
 2. **Set Up the Environment**: 
    ```bash
+    cd Ocean-CDR-Atlas-v0/workflows/dor-atlas
     conda env create -f environment.yml
+    conda activate dor
     ```
 
-3. **Verify Your Setup**:
-    ```bash
-    python dor_cli.py setup-environment
-    ```
+## Command-Line Interface (CLI) Tool
 
-Prerequisites
-Access to a Linux system (preferably an HPC environment like NERSC's Perlmutter)
-Basic knowledge of Python and command-line interfaces
-Familiarity with scientific data formats (NetCDF, Zarr)
-Environment Setup
-Clone the repository:
+The `dor_cli.py` command-line interface (CLI) tool is used to manage the data processing workflow. It provides several commands to process raw DOR data into research-grade datasets and create visualization stores. The main commands are
 
-Set up the environment:
+```bash
+(dor) abanihi@login31:~/Ocean-CDR-Atlas-v0/workflows/dor-atlas> python dor_cli.py --help
+                                                                                                                                                                                                                                                    
+ Usage: dor_cli.py [OPTIONS] COMMAND [ARGS]...                                                                                                                                                                                                      
+                                                                                                                                                                                                                                                    
+ CDR Atlas Data Processing Tool: Process and build visualization data                                                                                                                                                                               
+                                                                                                                                                                                                                                                    
+╭─ Options ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --install-completion          Install completion for the current shell.                                                                                                                                                                          │
+│ --show-completion             Show completion for the current shell, to copy it or customize the installation.                                                                                                                                   │
+│ --help                        Show this message and exit.                                                                                                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Commands ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ setup-environment   Setup and validate the processing environment.                                                                                                                                                                               │
+│ research-data       Process research-grade data                                                                                                                                                                                                  │
+│ vis                 Generate visualization pyramids                                                                                                                                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
-Verify your setup:
+```
 
-Your First Data Processing Task
-Let's process a single case to understand the basic workflow:
+### Verify Your Setup
+To verify your setup, you can run the following command:
 
-List available cases:
+```bash
+python dor_cli.py setup-environment
+```
 
-Process a specific case:
+This command checks the environment and ensures that all necessary dependencies are installed. It will also create a temporary directory for processing data. You should see output similar to the following:
 
-Check the output directory for your processed data:
+```bash
+                                                                            Environment Setup                                                                            
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━┓
+┃ Directory                            ┃ Path                                                                                                               ┃ Status    ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━┩
+│ scratch                              │ /pscratch/sd/a/abanihi/dor                                                                                         │ ✓ Exists  │
+│ joblib_cache_dir                     │ /pscratch/sd/a/abanihi/dor/joblib                                                                                  │ ✓ Exists  │
+│ dask_log_dir                         │ /pscratch/sd/a/abanihi/dask/logs                                                                                   │ ✓ Exists  │
+│ dask_local_dir                       │ /pscratch/sd/a/abanihi/dask/local-dir                                                                              │ ✓ Exists  │
+│ compressed_data_dir                  │ /global/cfs/projectdirs/m4746/Datasets/Ocean-CDR-Atlas-v0/DOR-Efficiency-Map/research-grade-compressed/experiments │ ✓ Exists  │
+│ data_archive_dir                     │ /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/data/archive                                             │ ✓ Exists  │
+│ store_1_path                         │ /pscratch/sd/a/abanihi/dor/store1b.zarr                                                                            │ ✗ Missing │
+│ store_2_path                         │ /pscratch/sd/a/abanihi/dor/store2.zarr                                                                             │ ✗ Missing │
+│ cumulative_fg_co2_percent_store_path │ /pscratch/sd/a/abanihi/dor/cumulative_FG_CO2_percent.zarr                                                          │ ✗ Missing │
+└──────────────────────────────────────┴────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┴───────────┘
+All required modules available
+Environment setup is complete and valid!
+```
 
-How-To Guides
-How to Process a Single Case
-To process a specific case manually:
+### Process raw DOR data into compressed research-grade dataset
+
+To process raw DOR data into a compressed research-grade dataset, you can use the same `dor_cli.py` command-line interface (CLI) tool. The CLI provides several commands to manage the data processing workflow. The main commands are:
+
+```bash
+(dor) abanihi@login31:~/Ocean-CDR-Atlas-v0/workflows/dor-atlas> python dor_cli.py research-data --help
+                                                                                                                                                                                                                                                    
+ Usage: dor_cli.py research-data [OPTIONS] COMMAND [ARGS]...                                                                                                                                                                                        
+                                                                                                                                                                                                                                                    
+ Process research-grade data                                                                                                                                                                                                                        
+                                                                                                                                                                                                                                                    
+╭─ Options ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --help          Show this message and exit.                                                                                                                                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Commands ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ list-cases          List all available cases with their metadata.                                                                                                                                                                                │
+│ process-case        Process a single case, compressing and saving all associated files.                                                                                                                                                          │
+│ process-all-cases   Process all available cases or a filtered subset.                                                                                                                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+```
+
+There are 690 polygons with four intervention dates (01, 04, 07, 10) in the dataset. Each case corresponds to a specific polygon and intervention date. This means there are 2760 cases in total. The CLI tool allows you to process all cases or filter by specific polygons or dates. To process a specific polygon, you can use the `process-all-cases` command with the `--polygon` option. For example, to process all cases for polygon 100, you would run:
+
+```bash
+python dor_cli.py research-data process-all-cases --polygon 123
+```
+
+
+To process all cases, you can simply run:
+
+```bash
+python dor_cli.py research-data process-all-cases
+```
+
+
+#### Running the processing command via batch job
+
+To run the processing command via batch job, you can use the `single-case-batch-job.sh` script. This script is designed to submit batch jobs for processing individual cases. You can specify the polygon ID and the number of cases to process. For example, to process cases for polygon 123, you would update the `single-case-batch-job.sh` script with the desired polygon ID and then submit the job using the `sbatch` command:
+
+```bash
+sbatch single-case-batch-job.sh
+```
+
+To facilitate the processing of multiple cases, you can also use the `submit-polygon-jobs.sh` script. 
+
+```bash
+(dor) abanihi@login34:~/Ocean-CDR-Atlas-v0/workflows/dor-atlas> bash submit-polygon-jobs.sh --help
+Usage: submit-polygon-jobs.sh [options]
+Submits jobs for processing polygons within QoS limits
 
 Options:
+  -s, --start NUM      Start polygon ID (default: 0)
+  -e, --end NUM        End polygon ID (default: 689)
+  -w, --wait NUM       Seconds to wait between checks (default: 60)
+  -h, --help           Show this help message
 
---output-dir or -o: Specify output directory
---data-dir or -d: Specify input data directory
---workers or -w: Number of worker processes
---use-dask: Use Dask for parallel processing
---verbose or -v: Show detailed output
-Example:
+Press Ctrl+C at any time to stop the script.
+```
 
-How to Process Multiple Cases
-To process all available cases or a filtered subset:
+This script will submit jobs for processing polygons within the specified range. You can adjust the `--start` and `--end` options to specify the range of polygons you want to process. For example, to process polygons from 0 to 689, you would run:
 
-Options:
+```bash
+bash submit-polygon-jobs.sh --start 0 --end 689
+```
+This will submit jobs for all polygons in the dataset. The script will wait for a specified number of seconds between checks to avoid overwhelming the system.
 
---output-dir or -o: Specify output directory
---data-dir or -d: Specify input data directory
---polygon or -p: Filter by polygon ID
---max-cases: Maximum number of cases to process
---workers or -w: Number of worker processes
---use-dask: Use Dask for parallel processing
---verbose or -v: Show detailed output
-Example:
+### Generate visualization pyramids
 
-How to Create Visualization Pyramids
-To build visualization pyramids for CDR Atlas data:
+To generate visualization pyramids, you can use the `vis` command in the CLI tool. The `vis` command provides several options for generating and managing different types of visualization stores. The main commands are:
 
-Options:
+```bash
+(dor) abanihi@login34:~/Ocean-CDR-Atlas-v0/workflows/dor-atlas> python dor_cli.py vis --help
+ Usage: dor_cli.py vis [OPTIONS] COMMAND [ARGS]...                                                                                                                                                                                                  
+                                                                                                                                                                                                                                                    
+ Generate visualization pyramids                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                                    
+╭─ Options ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --help          Show this message and exit.                                                                                                                                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Commands ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ create-template-store1   Create a template for the DOR efficiency visualization store.                                                                                                                                                           │
+│ create-template-store2   Create a template for the pyramid visualization store.                                                                                                                                                                  │
+│ create-template-store3   Create a template for the cumulative FG CO2 percent store.                                                                                                                                                              │
+│ populate-store1          Populate the DOR efficiency visualization store.                                                                                                                                                                        │
+│ populate-store2          Populate the visualization pyramid store                                                                                                                                                                                │
+│ populate-store3          Populate the cumulative FG CO2 percent store.                                                                                                                                                                           │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
---polygon-ids or -p: Specific polygon IDs to process
---polygon-range or -pr: Range of polygon IDs (start, end)
---injection-months or -im: Injection months to process
---input-dir or -i: Input directory with processed NetCDF files
---levels or -l: Number of pyramid levels to generate
-Example:
-
-How to Submit Batch Jobs on HPC
-For processing large datasets on an HPC system:
-
-Edit the template job script:
-
-Submit jobs for multiple polygons with the job submission script:
-
-Options:
-
---start or -s: Start polygon ID
---end or -e: End polygon ID
---wait or -w: Seconds to wait between checks
-Monitor your jobs:
-
-Explanations
-CDR Atlas Architecture
-The Ocean CDR Atlas consists of several components:
-
-Data Processing Pipeline: Processes raw model output into research-grade data
-Visualization System: Creates multi-resolution pyramids for web visualization
-Job Management: Scripts for running on HPC systems
-Configuration System: Settings for directories and data organization
-Data Processing Flow
-The system uses a polygon-based approach, where each "polygon" represents a geographic region where CDR interventions are simulated. The data is organized by polygon ID and injection date.
-
-Data Model
-Data is organized as follows:
-
-By polygon ID: Geographic regions (0-689)
-By injection date: When the CDR intervention begins (e.g., 1999-01, 1999-04)
-By elapsed time: Time since the intervention
-With counterfactual comparison: Data includes both the intervention scenario and a counterfactual (what would have happened without intervention)
-Visualization Pyramid Design
-The visualization system uses a pyramidal approach:
-
-Data is regridded to different resolution levels
-Each level represents a zoom level for visualization
-Data is stored in Zarr format for efficient cloud access
-Both experimental (with CDR) and delta (difference from counterfactual) bands are included
-This design allows for efficient visualization in web browsers, with appropriate resolutions loading as users zoom in and out.
-
-Reference
-CLI Command Reference
-list-cases
-List all available cases with their metadata.
-
-process-case
-Process a single case, compressing and saving all associated files.
-
-process-all
-Process all available cases or a filtered subset.
-
-build-vis-pyramid
-Build visualization pyramids for CDR Atlas data.
-
-create-template-vis-pyramid
-Create a template for the visualization store.
-
-setup-environment
-Setup and validate the processing environment.
-
-Key Functions
-process_single_case_with_dask: Process a single case using Dask
-process_single_case_no_dask: Process a single case using ProcessPoolExecutor
-open_compress_and_save_file: Open, compress, and save a single file
-process_and_create_pyramid: Process data and create visualization pyramid
-reduction: Apply data reduction operations to dataset
-Configuration Options
-Configuration is managed through the data_config.py file:
-
-get_scratch_dir(): Temporary storage directory
-get_dask_log_dir(): Dask log directory
-get_dask_local_dir(): Dask local directory
-get_compressed_data_dir(): Output directory for compressed data
-get_data_archive_dir(): Input directory for raw data
-Variable Definitions
-Variables are categorized in variables.py by priority and type:
-
-PRIORITY_1_VARS: Highest priority variables to include
-PRIORITY_2_VARS: Medium priority variables
-COUNTERFACTUAL_VARS: Variables related to the counterfactual scenario
-COORDS: Coordinate variables
-VARS_TO_DROP: Variables that can be dropped to save space
-Data Processing Options
-When using use_dask=True (the option in your query), the system uses Dask for parallel processing, which is particularly useful when:
-
-Processing large datasets that exceed memory capacity
-Working with distributed computing resources
-Requiring scalability across multiple nodes
-Dask processing is enabled with the --use-dask flag in the CLI commands and relies on a scheduler for task distribution.
+```
 
 
-Joblib Caching in Ocean CDR Atlas
-How-To Guide: Using the Caching System
-The Ocean CDR Atlas implements a powerful caching mechanism using joblib.Memory that can significantly improve performance by avoiding redundant computations. Here's how to leverage this feature effectively:
+## Joblib Caching 
 
-Understanding the Caching System
+
+The code base includes an implementation for a caching mechanism using []`joblib.Memory`](https://joblib.readthedocs.io/en/stable/generated/joblib.Memory.html) that can significantly improve performance by avoiding redundant computations. Here's how to leverage this feature effectively:
+
 The caching system works by:
 
-Storing the inputs and outputs of expensive function calls
-Returning cached results when the same function is called with identical inputs
-Persisting cache across sessions in the joblib_cache_dir
-How to Use Cached Functions
+- Storing the inputs and outputs of expensive function calls
+- Returning cached results when the same function is called with identical inputs
+- Persisting cache across sessions in the joblib_cache_dir
+
+
+### How Caching Works
+
 No special syntax is needed to use cached functions - the system automatically retrieves cached results when available:
+The `setup_memory` function initializes a persistent cache in the specified directory:
 
-Managing the Cache
-To clear the cache when needed:
+When a function is wrapped with `memory.cache()`, joblib:
 
-Explanation: Caching Architecture
-How Caching Works
-The setup_memory function initializes a persistent cache in the specified directory:
-
-When a function is wrapped with memory.cache(), joblib:
-
-Computes a hash of the function and its arguments
-Checks if results for this hash exist in the cache
-Returns cached results if available
-Otherwise, executes the function and stores results for future use
-Cache Performance Benefits
-The caching system provides several advantages:
-
-Time Savings: Avoid repeating expensive data processing operations
-Resource Efficiency: Reduce computational load on the cluster
-Iterative Development: Quickly test changes without reprocessing unchanged data
-Fault Tolerance: Resume interrupted processing without starting over
-Cached Functions in Ocean CDR Atlas
-Key functions benefiting from caching include:
-
-process_single_case_with_dask: Dask-based processing of individual cases
-process_single_case_no_dask: Thread-based processing of individual cases
-open_compress_and_save_file: File compression and transformation operations
-Reference: Caching Configuration
-Cache Directory Structure
-The cache is stored in a directory structure within $SCRATCH/dor/joblib_cache:
-
-Cache Size Considerations
-Monitor cache size with: du -sh $SCRATCH/dor/joblib_cache
-For large-scale processing, cache can grow to many gigabytes
-Consider clearing cache periodically on shared systems
-Cache files exempt from automatic SCRATCH purging policies
-Best Practices
-Function Purity: Ensure cached functions are deterministic (same inputs → same outputs)
-Selective Caching: Cache compute-intensive functions, not I/O-bound ones
-Version Awareness: Clear cache when code changes affect function behavior
-Parameter Stability: Use stable, reproducible function parameters for better cache hit rates
-For more details on joblib caching, see the joblib documentation.
+- Computes a hash of the function and its arguments
+- Checks if results for this hash exist in the cache
+- Returns cached results if available
+- Otherwise, executes the function and stores results for future use
 
 
 ## zarr v2 vs v3 
 
-- store 2b requires using zarr v2 because of the string encoding issue introduced by zarr v3
-
-## Usage Examples
-
-you can use the CLI tool in several ways:
-
-```bash
-# Setup and check the environment
-python dor_cli.py setup-environment
-
-# Research-grade data processing
-python dor_cli.py research list-cases
-python dor_cli.py research process-case my-case-name
-python dor_cli.py research process-all --polygon 123
-
-# Visualization pyramid generation
-python dor_cli.py vis build-vis-pyramid output.zarr
-python dor_cli.py vis create-template-vis-pyramid template.zarr
-```
-
+- store 2b requires using zarr v2 because of the string encoding discrepancy introduced by zarr v3

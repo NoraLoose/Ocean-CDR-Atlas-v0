@@ -4,7 +4,7 @@ import traceback
 
 import research_grade_data
 import typer
-import vis_pyramid
+import visualization_data
 from dask.diagnostics.progress import ProgressBar
 from rich.console import Console
 from rich.table import Table
@@ -35,7 +35,9 @@ except ImportError:
 app.add_typer(
     research_grade_data.app, name="research-data", help="Process research-grade data"
 )
-app.add_typer(vis_pyramid.app, name="vis", help="Generate visualization pyramids")
+app.add_typer(
+    visualization_data.app, name="vis", help="Generate visualization pyramids"
+)
 
 
 def setup_directories():

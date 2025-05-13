@@ -1,4 +1,5 @@
 import os
+import pathlib
 import traceback
 from typing import Optional
 
@@ -7,18 +8,28 @@ import dask
 import dask.array as dsa
 import dask.config
 import fsspec
-import joblib
 import loky
 import ndpyramid
 import numcodecs
 import numpy as np
+import pandas as pd
 import typer
 import xarray as xr
+from dor_common import (
+    add_intervention_date_coord,
+    add_polygon_id_coord,
+    console,
+    expand_ensemble_dims,
+    generate_padded_months,
+    get_case_metadata,
+    get_cases_df,
+    get_nc_glob_pattern,
+    set_elapsed_time,
+    setup_memory,
+)
 from dor_config import DORConfig
-from rich.console import Console
+from rich.progress import BarColumn, Progress, TaskProgressColumn, TextColumn
 
-# Set up console for nice formatting
-console = Console()
 config = DORConfig()
 
 
@@ -27,13 +38,6 @@ app = typer.Typer(help="Build visualization pyramids for CDR Atlas data")
 
 # Initialize joblib memory cache
 memory = None
-
-
-def setup_memory(cache_dir):
-    """Setup joblib memory cache"""
-    global memory
-    memory = joblib.Memory(cache_dir, verbose=0)
-    return memory
 
 
 def integrate_column_mol(
@@ -170,7 +174,7 @@ def reshape_into_month_year(ds: xr.Dataset) -> xr.Dataset:
             [
                 "band",
                 "elapsed_time",
-                "injection_date",
+                "intervention_date",
                 "month",
                 "polygon_id",
                 "year",
@@ -179,7 +183,9 @@ def reshape_into_month_year(ds: xr.Dataset) -> xr.Dataset:
             ]
         )
     )
-    reshaped["injection_date"] = reshaped.injection_date.dt.month.astype("float32")
+    reshaped["intervention_date"] = reshaped.intervention_date.dt.month.astype(
+        "float32"
+    )
 
     return reshaped.drop_vars(to_drop_coords)
 
@@ -217,16 +223,18 @@ def _create_template_store1() -> xr.Dataset:
     """Create a template for visualization store with empty data arrays."""
     store1b_chunks_encoding_per_variable = {
         "DOR_efficiency": {
-            "chunks": {"polygon_id": 1, "injection_date": 1, "elapsed_time": 180}
-        },  # polygon_id: 1 injection_date: 1 elapsed_time: 180
+            "chunks": {"polygon_id": 1, "intervention_month": 1, "elapsed_time": 180}
+        },  # polygon_id: 1 intervention_date: 1 elapsed_time: 180
         "polygon_id": {"chunks": {"polygon_id": 690}},  # polygon_id: 1
-        "injection_date": {"chunks": {"injection_date": 1}},  # injection_date: 1
+        "intervention_month": {
+            "chunks": {"intervention_month": 1}
+        },  # intervention_date: 1
         "elapsed_time": {"chunks": {"elapsed_time": 180}},  # elapsed_time: 180
     }
     sizes_all_dims = {
         "elapsed_time": 180,
         "polygon_id": 690,
-        "injection_date": 4,
+        "intervention_month": 4,
     }
 
     placeholder = xr.Dataset()
@@ -238,10 +246,10 @@ def _create_template_store1() -> xr.Dataset:
         dims=["polygon_id"],
         attrs={"long_name": "Polygon ID"},
     ).astype("int32")
-    placeholder["injection_date"] = xr.DataArray(
+    placeholder["intervention_month"] = xr.DataArray(
         np.array([1, 4, 7, 10]),
-        dims=["injection_date"],
-        attrs={"long_name": "injection date", "units": "month of 1999"},
+        dims=["intervention_month"],
+        attrs={"long_name": "intervention month", "units": "month of 1999"},
     ).astype("int32")
 
     var_chunks = store1b_chunks_encoding_per_variable["DOR_efficiency"]["chunks"]
@@ -260,8 +268,8 @@ def _create_template_store1() -> xr.Dataset:
     )
     placeholder = (
         placeholder.pipe(set_compression_encoding)
-        .chunk(polygon_id=-1, injection_date=1, elapsed_time=-1)
-        .transpose("elapsed_time", "polygon_id", "injection_date")
+        .chunk(polygon_id=-1, intervention_month=1, elapsed_time=-1)
+        .transpose("elapsed_time", "polygon_id", "intervention_month")
     )
 
     return placeholder
@@ -285,8 +293,8 @@ def _create_template_store2(
             "int32"
         )
 
-        ds["injection_date"] = xr.DataArray(
-            [1, 4, 7, 10], dims="injection_date"
+        ds["intervention_date"] = xr.DataArray(
+            [1, 4, 7, 10], dims="intervention_date"
         ).astype("int32")
 
         ds["month"] = xr.DataArray(np.arange(1, 13), dims="month").astype("int32")
@@ -317,7 +325,7 @@ def _create_template_store2(
             )
 
         plevels[level] = ds.chunk(
-            polygon_id=1, band=1, injection_date=1, month=1, year=-1, x=128, y=128
+            polygon_id=1, band=1, intervention_date=1, month=1, year=-1, x=128, y=128
         )
 
         # Copy attributes from existing pyramid
@@ -340,20 +348,20 @@ def _create_template_cumulative_fg_co2_percent_store() -> xr.Dataset:
         "FG_CO2_percent_cumulative": {
             "chunks": {
                 "polygon_id": 690,
-                "injection_date": 1,
+                "intervention_date": 1,
                 "elapsed_time": 180,
                 "dist2center": 3,
             }
         },
         "polygon_id": {"chunks": {"polygon_id": 690}},
-        "injection_date": {"chunks": {"injection_date": 1}},
+        "intervention_date": {"chunks": {"intervention_date": 1}},
         "elapsed_time": {"chunks": {"elapsed_time": 180}},
         "dist2center": {"chunks": {"dist2center": 3}},
     }
     sizes_all_dims = {
         "elapsed_time": 180,
         "polygon_id": 690,
-        "injection_date": 4,
+        "intervention_date": 4,
         "dist2center": 3,
     }
 
@@ -366,10 +374,10 @@ def _create_template_cumulative_fg_co2_percent_store() -> xr.Dataset:
         dims=["polygon_id"],
         attrs={"long_name": "Polygon ID"},
     ).astype("int32")
-    placeholder["injection_date"] = xr.DataArray(
+    placeholder["intervention_date"] = xr.DataArray(
         np.array([1, 4, 7, 10]),
-        dims=["injection_date"],
-        attrs={"long_name": "injection date", "units": "month of 1999"},
+        dims=["intervention_date"],
+        attrs={"long_name": "intervention date", "units": "month of 1999"},
     ).astype("int32")
 
     placeholder["dist2center"] = xr.DataArray(
@@ -397,8 +405,8 @@ def _create_template_cumulative_fg_co2_percent_store() -> xr.Dataset:
     )
     placeholder = (
         placeholder.pipe(set_compression_encoding)
-        .chunk(polygon_id=-1, injection_date=1, elapsed_time=-1, dist2center=-1)
-        .transpose("elapsed_time", "polygon_id", "injection_date", "dist2center")
+        .chunk(polygon_id=-1, intervention_date=1, elapsed_time=-1, dist2center=-1)
+        .transpose("elapsed_time", "polygon_id", "intervention_date", "dist2center")
     )
     placeholder.attrs["long_name"] = "Cumulative FG CO2 percent"
     placeholder.attrs["units"] = "percent"
@@ -455,43 +463,31 @@ def print_template_vis_store2(path: str) -> None:
     placeholder.close()
 
 
-def generate_padded_ids(start: int, end: int) -> list[str]:
-    """Generate zero-padded string IDs for a range of integers."""
-    return [f"{i:03d}" for i in range(start, end)]
-
-
-def generate_padded_months(months: list[int]) -> list[str]:
-    """Generate zero-padded string months."""
-    return [f"{month:02d}" for month in months]
-
-
-def get_nc_glob_pattern(data_dir: str, polygon_id: str, injection_month: str) -> str:
-    """Generate glob pattern for NetCDF files."""
-    return f"{data_dir}/{polygon_id}/{injection_month}/*.nc"
-
-
-def load_ssh_data(injection_month: str, ssh_path:str = "/global/cfs/cdirs/m4746/Datasets/SMYLE-FOSI/ocn/proc/tseries/month_1/g.e22.GOMIPECOIAF_JRA-1p4-2018.TL319_g17.SMYLE.005.pop.h.SSH.030601-036812.nc") -> xr.DataArray:
-    """Load SSH data for a given injection month."""
+def load_ssh_data(
+    intervention_month: str,
+    ssh_path: str = "/global/cfs/cdirs/m4746/Datasets/SMYLE-FOSI/ocn/proc/tseries/month_1/g.e22.GOMIPECOIAF_JRA-1p4-2018.TL319_g17.SMYLE.005.pop.h.SSH.030601-036812.nc",
+) -> xr.DataArray:
+    """Load SSH data for a given intervention month."""
 
     ds = xr.open_dataset(ssh_path, chunks={}, decode_timedelta=True)
 
-    if int(injection_month) == 1:
+    if int(intervention_month) == 1:
         subset_slice = slice("0347-01", "0361-12")
-    elif int(injection_month) == 4:
+    elif int(intervention_month) == 4:
         subset_slice = slice("0347-04", "0362-03")
-    elif int(injection_month) == 7:
+    elif int(intervention_month) == 7:
         subset_slice = slice("0347-07", "0362-06")
-    elif int(injection_month) == 10:
+    elif int(intervention_month) == 10:
         subset_slice = slice("0347-10", "0362-09")
     else:
-        raise ValueError(f"Invalid injection month: {injection_month}")
+        raise ValueError(f"Invalid intervention month: {intervention_month}")
     ds = ds.sel(time=subset_slice)
 
     year = ds.time.dt.year
     month = ds.time.dt.month
 
     # Compute current year based on formula
-    current_year = 1999 + year - int("0347")  # Equivalent to 1999 + year - 347
+    current_year = 1999 + year - int("0347")
 
     # Create DataArray of datetime objects
     current_time = xr.DataArray(
@@ -503,23 +499,23 @@ def load_ssh_data(injection_month: str, ssh_path:str = "/global/cfs/cdirs/m4746/
         name="current_time",
     )
 
-    injection_date_coord = xr.DataArray(
+    intervention_date_coord = xr.DataArray(
         data=[
             cftime.DatetimeNoLeap.strptime(
-                f"1999-{injection_month}",
+                f"1999-{intervention_month}",
                 "%Y-%m",
                 calendar="noleap",
                 has_year_zero=True,
             )
         ],
-        dims=["injection_date"],
-        attrs={"long_name": "injection date"},
+        dims=["intervention_date"],
+        attrs={"long_name": "intervention date"},
     )
 
     ds = (
         ds.assign_coords(
-            injection_date=injection_date_coord,
-            elapsed_time=(current_time - injection_date_coord).squeeze(),
+            intervention_date=intervention_date_coord,
+            elapsed_time=(current_time - intervention_date_coord).squeeze(),
         )
         .drop_indexes("time")
         .swap_dims(time="elapsed_time")
@@ -527,7 +523,7 @@ def load_ssh_data(injection_month: str, ssh_path:str = "/global/cfs/cdirs/m4746/
     )
 
     console.print(
-        f"Loaded SSH data for injection month {ds.injection_date} \ntime_slice: {subset_slice}",
+        f"Loaded SSH data for intervention month {ds.intervention_date} \ntime_slice: {subset_slice}",
         style="blue",
     )
 
@@ -536,7 +532,7 @@ def load_ssh_data(injection_month: str, ssh_path:str = "/global/cfs/cdirs/m4746/
 
 def process_and_create_pyramid(
     polygon_id: str,
-    injection_month: str,
+    intervention_month: str,
     data_dir: str,
     store_path: str,
     weights_store: str,
@@ -544,7 +540,7 @@ def process_and_create_pyramid(
 ) -> None:
     """Process data and create visualization pyramid."""
     try:
-        path = get_nc_glob_pattern(data_dir, polygon_id, injection_month)
+        path = get_nc_glob_pattern(data_dir, polygon_id, intervention_month)
         console.print(f"Loading data from {path}", style="blue")
 
         with dask.config.set(
@@ -563,7 +559,7 @@ def process_and_create_pyramid(
             ds = dask.optimize(ds)[0]
 
             console.print("Processing dataset through reduction pipeline", style="blue")
-            ssh = load_ssh_data(injection_month)
+            ssh = load_ssh_data(intervention_month)
 
             bands_ds = (
                 ds.pipe(reduction, ssh)
@@ -573,7 +569,13 @@ def process_and_create_pyramid(
 
             console.print("Building visualization pyramid", style="blue")
             other_chunks = dict(
-                month=1, year=-1, band=1, polygon_id=1, injection_date=1, x=128, y=128
+                month=1,
+                year=-1,
+                band=1,
+                polygon_id=1,
+                intervention_date=1,
+                x=128,
+                y=128,
             )
 
             if fsspec.get_mapper(weights_store).fs.exists(weights_store):
@@ -612,7 +614,7 @@ def process_and_create_pyramid(
     except Exception as exc:
         console.print(
             f"[bold red]Error processing polygon_id={polygon_id}, "
-            f"injection_month={injection_month}: {traceback.format_exc()}[/bold red]"
+            f"intervention_month={intervention_month}: {traceback.format_exc()}[/bold red]"
         )
         raise exc
 
@@ -627,144 +629,13 @@ def main(ctx: typer.Context):
 
 
 @app.command()
-def build_pyramid(
-    output_store: str = typer.Option(
-        config.store_2_path, help="Path to the output zarr store"
-    ),
-    weights_store: Optional[str] = typer.Option(
-        f"{os.environ['SCRATCH']}/weights.zarr",
-        "--weights-store",
-        "-w",
-        help="Path to the weights zarr store (optional)",
-    ),
-    polygon_ids: Optional[list[int]] = typer.Option(
-        None, "--polygon-ids", "-p", help="Specific polygon IDs to process"
-    ),
-    polygon_range: Optional[list[int]] = typer.Option(
-        None,
-        "--polygon-range",
-        "-pr",
-        help="Range of polygon IDs to process (start, end)",
-    ),
-    injection_months: list[int] = typer.Option(
-        [1, 4, 7, 10], "--injection-months", "-im", help="Injection months to process"
-    ),
-    input_dir: Optional[str] = typer.Option(
-        None, "--input-dir", "-i", help="Directory containing processed NetCDF files"
-    ),
-    levels: int = typer.Option(
-        2, "--levels", "-l", help="Number of pyramid levels to generate"
-    ),
-):
-    """Build visualization pyramids for CDR Atlas data."""
-    # Set up directories
-    from dor_cli import setup_directories
-
-    dirs = setup_directories()
-    memory = setup_memory(dirs["joblib_cache_dir"])
-
-    # Use provided input directory or default
-    data_dir = input_dir if input_dir else dirs["compressed_data_dir"]
-
-    console.print(
-        f"Building visualization pyramids from data in: {data_dir}", style="blue"
-    )
-    console.print(f"Output zarr store: {output_store}", style="blue")
-
-    try:
-        # Determine which polygon IDs to process
-        if polygon_ids:
-            ids_to_process = polygon_ids
-        elif polygon_range:
-            start, end = polygon_range
-            ids_to_process = list(range(start, end))
-        else:
-            ids_to_process = list(range(0, 690))
-
-        padded_polygon_ids = [f"{polygon_id:03d}" for polygon_id in ids_to_process]
-        padded_injection_months = generate_padded_months(injection_months)
-
-        console.print(f"Processing {len(padded_polygon_ids)} polygon IDs", style="blue")
-        console.print(
-            f"Processing {len(padded_injection_months)} injection months", style="blue"
-        )
-
-        # Prepare all tasks
-        tasks = []
-        for polygon_id in padded_polygon_ids:
-            for injection_month in padded_injection_months:
-                tasks.append((polygon_id, injection_month))
-
-        for polygon_id, injection_month in tasks:
-            try:
-                func = memory.cache(process_and_create_pyramid)
-                func(
-                    polygon_id=polygon_id,
-                    injection_month=injection_month,
-                    data_dir=data_dir,
-                    store_path=output_store,
-                    weights_store=weights_store,
-                    levels=levels,
-                )
-                console.print(
-                    f"Finished processing polygon_id={polygon_id}, injection_month={injection_month}",
-                    style="green",
-                )
-
-            except Exception:
-                console.print(
-                    f"[bold red]Error processing {polygon_id}/{injection_month}: "
-                    f"{traceback.format_exc()}[/bold red]"
-                )
-
-        console.print(
-            "[bold green]Successfully built all visualization pyramids![/bold green]"
-        )
-
-    except Exception:
-        console.print(
-            f"[bold red]Error building visualization pyramids: {traceback.format_exc()}[/bold red]"
-        )
-        raise typer.Exit(1)
-
-
-@app.command()
-def create_template_cumulative_fg_co2_percent_store(
-    output_store: str = typer.Option(
-        config.cumulative_fg_co2_percent_store_path,
-        help="Output path for the template visualization store",
-    ),
-):
-    """Create a template for the cumulative FG CO2 percent store."""
-    try:
-        console.print(
-            "Creating template for cumulative FG CO2 percent store...", style="blue"
-        )
-        template = _create_template_cumulative_fg_co2_percent_store()
-
-        template.to_zarr(
-            output_store, compute=False, zarr_format=2, consolidated=True, mode="w"
-        )
-
-        print_template_cumulative_fg_co2_percent_store(output_store)
-
-        console.print(f"Template saved to {output_store}", style="green")
-
-    except Exception as _:
-        console.print(
-            f"[bold red]Error creating template visualization store: {traceback.format_exc()}[/bold red]"
-        )
-        raise typer.Exit(1)
-
-
-@app.command()
 def create_template_store1(
     output_store: str = typer.Option(
         config.store_1_path,
         help="Output path for the template visualization store",
     ),
 ):
-    """Create a template for the visualization store."""
+    """Create a template for the DOR efficiency visualization store."""
     try:
         console.print("Creating template for store1...", style="blue")
         template = _create_template_store1()
@@ -800,7 +671,7 @@ def create_template_store2(
         2, "--levels", "-l", help="Number of zoom levels for the template pyramid"
     ),
 ):
-    """Create a template for the visualization store."""
+    """Create a template for the pyramid visualization store."""
     try:
         console.print("Opening reference OAE pyramid...", style="blue")
         existing_oae_pyramid = xr.open_datatree(
@@ -836,6 +707,242 @@ def create_template_store2(
             f"[bold red]Error creating template visualization store: {traceback.format_exc()}[/bold red]"
         )
         raise typer.Exit(1)
+
+
+@app.command()
+def create_template_store3(
+    output_store: str = typer.Option(
+        config.cumulative_fg_co2_percent_store_path,
+        help="Output path for the template visualization store",
+    ),
+):
+    """Create a template for the cumulative FG CO2 percent store."""
+    try:
+        console.print(
+            "Creating template for cumulative FG CO2 percent store...", style="blue"
+        )
+        template = _create_template_cumulative_fg_co2_percent_store()
+
+        template.to_zarr(
+            output_store, compute=False, zarr_format=2, consolidated=True, mode="w"
+        )
+
+        print_template_cumulative_fg_co2_percent_store(output_store)
+
+        console.print(f"Template saved to {output_store}", style="green")
+
+    except Exception as _:
+        console.print(
+            f"[bold red]Error creating template visualization store: {traceback.format_exc()}[/bold red]"
+        )
+        raise typer.Exit(1)
+
+
+def process_case_zarr_store(
+    *, case_metadata: pd.Series, path: pathlib.Path
+) -> xr.Dataset:
+    def compute_dor_efficiency(ds: xr.Dataset) -> xr.Dataset:
+        ds["DOR_efficiency"] = (-ds.DIC_ADD_TOTAL / ds.DIC_FLUX).astype("float32")
+        return ds
+
+    ds = (
+        xr.open_dataset(path, engine="zarr", chunks={}, decode_timedelta=False)
+        .pipe(add_polygon_id_coord, case_metadata=case_metadata)
+        .pipe(add_intervention_date_coord, case_metadata=case_metadata)
+        .drop_vars("time")
+        .rename_dims(time="elapsed_time")
+        .pipe(expand_ensemble_dims)
+        .pipe(compute_dor_efficiency)
+        .pipe(set_elapsed_time)
+        .rename({"intervention_date": "intervention_month"})
+    )
+    ds["intervention_month"] = ds.intervention_month.dt.month.astype("int32")
+
+    return ds[["DOR_efficiency", "elapsed_time"]].drop_vars(["time_delta"])
+
+
+def _populate_store1(
+    *,
+    analysis_zarr_stores_dir,
+    output_store: str = config.store_1_path,
+):
+    """Populate the DOR efficiency visualization store."""
+
+    console.print("Populating store1...", style="blue")
+    df = get_cases_df()
+    base_directory = pathlib.Path(analysis_zarr_stores_dir)
+    console.print(f"Found {len(df)} cases", style="blue")
+    console.print("Processing cases...", style="blue")
+    with Progress(
+        TextColumn("[bold blue]{task.description}"),
+        BarColumn(),
+        TaskProgressColumn(),
+        console=console,
+    ) as progress:
+        main_task = progress.add_task("Processing all cases", total=len(df))
+        for key, group in df.groupby("start_date"):
+            dsets = []
+            for case in group.index:
+                progress.update(
+                    main_task,
+                    advance=1,
+                    description=f"Processing case {case} ({key})",
+                )
+                path = base_directory / f"{case}.analysis.zarr"
+                case_metadata = get_case_metadata(case, df=df)
+                single_ds = process_case_zarr_store(
+                    case_metadata=case_metadata, path=path
+                )
+                dsets.append(single_ds)
+            dataset = (
+                xr.combine_by_coords(dsets, combine_attrs="drop_conflicts")
+                .transpose("elapsed_time", "polygon_id", ...)
+                .chunk(polygon_id=-1, elapsed_time=-1)
+            )
+            console.print(dataset)
+            dataset.to_zarr(output_store, region="auto")
+            console.print(f"Saved dataset to {output_store}", style="green")
+
+    console.print("All cases processed", style="green")
+    console.print(f"Store populated at {output_store}", style="green")
+
+
+@app.command()
+def populate_store1(
+    output_store: str = typer.Option(
+        config.store_1_path, help="Path to the output zarr store"
+    ),
+    analysis_zarr_stores_dir: Optional[str] = typer.Option(
+        "/global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/data/analysis",
+        "--analysis-zarr-stores-dir",
+        "-a",
+        help="Directory containing analysis zarr stores (optional)",
+    ),
+):
+    """Populate the DOR efficiency visualization store."""
+
+    try:
+        _populate_store1(
+            output_store=output_store, analysis_zarr_stores_dir=analysis_zarr_stores_dir
+        )
+
+    except Exception as _:
+        console.print(
+            f"[bold red]Error populating visualization store: {traceback.format_exc()}[/bold red]"
+        )
+        raise typer.Exit(1)
+
+
+@app.command()
+def populate_store2(
+    output_store: str = typer.Option(
+        config.store_2_path, help="Path to the output zarr store"
+    ),
+    weights_store: Optional[str] = typer.Option(
+        f"{os.environ['SCRATCH']}/weights.zarr",
+        "--weights-store",
+        "-w",
+        help="Path to the weights zarr store (optional)",
+    ),
+    polygon_ids: Optional[list[int]] = typer.Option(
+        None, "--polygon-ids", "-p", help="Specific polygon IDs to process"
+    ),
+    polygon_range: Optional[list[int]] = typer.Option(
+        None,
+        "--polygon-range",
+        "-pr",
+        help="Range of polygon IDs to process (start, end)",
+    ),
+    intervention_months: list[int] = typer.Option(
+        [1, 4, 7, 10],
+        "--intervention-months",
+        "-im",
+        help="intervention months to process",
+    ),
+    input_dir: Optional[str] = typer.Option(
+        None, "--input-dir", "-i", help="Directory containing processed NetCDF files"
+    ),
+    levels: int = typer.Option(
+        2, "--levels", "-l", help="Number of pyramid levels to generate"
+    ),
+):
+    """Populate the visualization pyramid store"""
+    # Set up directories
+    from dor_cli import setup_directories
+
+    dirs = setup_directories()
+    memory = setup_memory(dirs["joblib_cache_dir"])
+
+    # Use provided input directory or default
+    data_dir = input_dir if input_dir else dirs["compressed_data_dir"]
+
+    console.print(
+        f"Building visualization pyramids from data in: {data_dir}", style="blue"
+    )
+    console.print(f"Output zarr store: {output_store}", style="blue")
+
+    try:
+        # Determine which polygon IDs to process
+        if polygon_ids:
+            ids_to_process = polygon_ids
+        elif polygon_range:
+            start, end = polygon_range
+            ids_to_process = list(range(start, end))
+        else:
+            ids_to_process = list(range(0, 690))
+
+        padded_polygon_ids = [f"{polygon_id:03d}" for polygon_id in ids_to_process]
+        padded_intervention_months = generate_padded_months(intervention_months)
+
+        console.print(f"Processing {len(padded_polygon_ids)} polygon IDs", style="blue")
+        console.print(
+            f"Processing {len(padded_intervention_months)} intervention months",
+            style="blue",
+        )
+
+        # Prepare all tasks
+        tasks = []
+        for polygon_id in padded_polygon_ids:
+            for intervention_month in padded_intervention_months:
+                tasks.append((polygon_id, intervention_month))
+
+        for polygon_id, intervention_month in tasks:
+            try:
+                func = memory.cache(process_and_create_pyramid)
+                func(
+                    polygon_id=polygon_id,
+                    intervention_month=intervention_month,
+                    data_dir=data_dir,
+                    store_path=output_store,
+                    weights_store=weights_store,
+                    levels=levels,
+                )
+                console.print(
+                    f"Finished processing polygon_id={polygon_id}, intervention_month={intervention_month}",
+                    style="green",
+                )
+
+            except Exception:
+                console.print(
+                    f"[bold red]Error processing {polygon_id}/{intervention_month}: "
+                    f"{traceback.format_exc()}[/bold red]"
+                )
+
+        console.print(
+            "[bold green]Successfully built all visualization pyramids![/bold green]"
+        )
+
+    except Exception:
+        console.print(
+            f"[bold red]Error building visualization pyramids: {traceback.format_exc()}[/bold red]"
+        )
+        raise typer.Exit(1)
+
+
+@app.command()
+def populate_store3():
+    """Populate the cumulative FG CO2 percent store."""
+    ...
 
 
 if __name__ == "__main__":
