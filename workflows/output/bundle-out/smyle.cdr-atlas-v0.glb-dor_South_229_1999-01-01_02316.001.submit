@@ -9,12 +9,12 @@ Setting Environment HDF5_USE_FILE_LOCKING=FALSE
 Setting Environment PERL5LIB=/global/cfs/cdirs/e3sm/perl/lib/perl5-only-switch
 Setting Environment FI_CXI_RX_MATCH_MODE=software
 Setting Environment MPICH_COLL_SYNC=MPI_Bcast
-Setting Environment NETCDF_PATH=/opt/cray/pe/netcdf-hdf5parallel/4.9.0.3/intel/19.0
-Setting Environment PNETCDF_PATH=/opt/cray/pe/parallel-netcdf/1.12.3.3/intel/19.0
+Setting Environment NETCDF_PATH=/opt/cray/pe/netcdf/4.9.0.13/intel/2023.2
+Setting Environment PNETCDF_PATH=/opt/cray/pe/parallel-netcdf/1.12.3.13/intel/2023.2
 Setting resource.RLIMIT_STACK to -1 from (8388608, -1)
 GET_REFCASE is false, the user is expected to stage the refcase to the run directory.
 Creating component namelists
-  2025-02-05 04:11:41 atm 
+  2025-03-11 01:54:35 atm 
    Calling /global/cfs/cdirs/m4746/Projects/Ocean-CDR-Atlas-v0/codes/cesm2.2.0/cime/src/components/data_comps_mct/datm/cime_config/buildnml
 copying /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/user_datm.streams.txt.presaero.clim_1850 -> /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/Buildconf/datmconf/datm.streams.txt.presaero.clim_1850
 copying /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/user_datm.streams.txt.co2tseries.omip -> /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/Buildconf/datmconf/datm.streams.txt.co2tseries.omip
@@ -29,25 +29,25 @@ copying /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cd
 copying /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/Buildconf/datmconf/datm.streams.txt.CORE_IAF_JRA_1p4_2018.NCEP.V_10 -> /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run
 copying /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/Buildconf/datmconf/datm.streams.txt.CORE_IAF_JRA_1p4_2018.NCEP.Q_10 -> /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run
 copying /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/Buildconf/datmconf/datm.streams.txt.CORE_IAF_JRA_1p4_2018.NCEP.T_10 -> /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run
-  2025-02-05 04:11:42 lnd 
+  2025-03-11 01:54:36 lnd 
    Calling /global/cfs/cdirs/m4746/Projects/Ocean-CDR-Atlas-v0/codes/cesm2.2.0/cime/src/components/stub_comps_mct/slnd/cime_config/buildnml
-  2025-02-05 04:11:42 ice 
+  2025-03-11 01:54:36 ice 
    Calling /global/cfs/cdirs/m4746/Projects/Ocean-CDR-Atlas-v0/codes/cesm2.2.0/components/cice//cime_config/buildnml
-  2025-02-05 04:11:42 ocn 
+  2025-03-11 01:54:37 ocn 
    Calling /global/cfs/cdirs/m4746/Projects/Ocean-CDR-Atlas-v0/codes/cesm2.2.0/components/pop//cime_config/buildnml
-  2025-02-05 04:11:49 rof 
+  2025-03-11 01:54:49 rof 
    Calling /global/cfs/cdirs/m4746/Projects/Ocean-CDR-Atlas-v0/codes/cesm2.2.0/cime/src/components/data_comps_mct/drof/cime_config/buildnml
 copying /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/Buildconf/drofconf/drof_in -> /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run
 copying /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/Buildconf/drofconf/drof.streams.txt.rof.iaf_jra_1p4_2018 -> /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run
-  2025-02-05 04:11:49 glc 
+  2025-03-11 01:54:51 glc 
    Calling /global/cfs/cdirs/m4746/Projects/Ocean-CDR-Atlas-v0/codes/cesm2.2.0/cime/src/components/stub_comps_mct/sglc/cime_config/buildnml
-  2025-02-05 04:11:49 wav 
+  2025-03-11 01:54:51 wav 
    Calling /global/cfs/cdirs/m4746/Projects/Ocean-CDR-Atlas-v0/codes/cesm2.2.0/components/ww3//cime_config/buildnml
-  2025-02-05 04:11:49 iac 
+  2025-03-11 01:54:51 iac 
    Running /global/cfs/cdirs/m4746/Projects/Ocean-CDR-Atlas-v0/codes/cesm2.2.0/cime/src/components/stub_comps_mct/siac/cime_config/buildnml 
-  2025-02-05 04:11:50 esp 
+  2025-03-11 01:54:52 esp 
    Calling /global/cfs/cdirs/m4746/Projects/Ocean-CDR-Atlas-v0/codes/cesm2.2.0/cime/src/components/stub_comps_mct/sesp/cime_config/buildnml
-  2025-02-05 04:11:50 cpl 
+  2025-03-11 01:54:52 cpl 
    Calling /global/cfs/cdirs/m4746/Projects/Ocean-CDR-Atlas-v0/codes/cesm2.2.0/cime/src/drivers/mct/cime_config/buildnml
 copying /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/Buildconf/cplconf/drv_in -> /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run
 copying /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/Buildconf/cplconf/seq_maps.rc -> /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run
@@ -100,8 +100,8 @@ Setting Environment HDF5_USE_FILE_LOCKING=FALSE
 Setting Environment PERL5LIB=/global/cfs/cdirs/e3sm/perl/lib/perl5-only-switch
 Setting Environment FI_CXI_RX_MATCH_MODE=software
 Setting Environment MPICH_COLL_SYNC=MPI_Bcast
-Setting Environment NETCDF_PATH=/opt/cray/pe/netcdf-hdf5parallel/4.9.0.3/intel/19.0
-Setting Environment PNETCDF_PATH=/opt/cray/pe/parallel-netcdf/1.12.3.3/intel/19.0
+Setting Environment NETCDF_PATH=/opt/cray/pe/netcdf/4.9.0.13/intel/2023.2
+Setting Environment PNETCDF_PATH=/opt/cray/pe/parallel-netcdf/1.12.3.13/intel/2023.2
 Setting resource.RLIMIT_STACK to -1 from (-1, -1)
 Loading input file list: 'Buildconf/cpl.input_data_list'
 Loading input file list: 'Buildconf/pop.input_data_list'
@@ -112,16 +112,16 @@ Loading input file list: 'Buildconf/cice.input_data_list'
 GET_REFCASE is false, the user is expected to stage the refcase to the run directory.
 GET_REFCASE is false, the user is expected to stage the refcase to the run directory.
 Creating component namelists
-  2025-02-05 04:11:55 atm 
-  2025-02-05 04:11:55 lnd 
-  2025-02-05 04:11:55 ice 
-  2025-02-05 04:11:55 ocn 
-  2025-02-05 04:11:55 rof 
-  2025-02-05 04:11:55 glc 
-  2025-02-05 04:11:55 wav 
-  2025-02-05 04:11:55 iac 
-  2025-02-05 04:11:55 esp 
-  2025-02-05 04:11:55 cpl 
+  2025-03-11 01:54:59 atm 
+  2025-03-11 01:54:59 lnd 
+  2025-03-11 01:54:59 ice 
+  2025-03-11 01:54:59 ocn 
+  2025-03-11 01:54:59 rof 
+  2025-03-11 01:54:59 glc 
+  2025-03-11 01:54:59 wav 
+  2025-03-11 01:54:59 iac 
+  2025-03-11 01:54:59 esp 
+  2025-03-11 01:54:59 cpl 
 copying /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run/wav_modelio.nml -> /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/CaseDocs
 copying /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run/cpl_modelio.nml -> /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/CaseDocs
 copying /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run/rof_modelio.nml -> /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/CaseDocs
@@ -164,13 +164,13 @@ Setting Environment HDF5_USE_FILE_LOCKING=FALSE
 Setting Environment PERL5LIB=/global/cfs/cdirs/e3sm/perl/lib/perl5-only-switch
 Setting Environment FI_CXI_RX_MATCH_MODE=software
 Setting Environment MPICH_COLL_SYNC=MPI_Bcast
-Setting Environment NETCDF_PATH=/opt/cray/pe/netcdf-hdf5parallel/4.9.0.3/intel/19.0
-Setting Environment PNETCDF_PATH=/opt/cray/pe/parallel-netcdf/1.12.3.3/intel/19.0
+Setting Environment NETCDF_PATH=/opt/cray/pe/netcdf/4.9.0.13/intel/2023.2
+Setting Environment PNETCDF_PATH=/opt/cray/pe/parallel-netcdf/1.12.3.13/intel/2023.2
 Setting resource.RLIMIT_STACK to -1 from (-1, -1)
 Generating namelists for /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001
 GET_REFCASE is false, the user is expected to stage the refcase to the run directory.
 Creating component namelists
-  2025-02-05 04:11:58 atm 
+  2025-03-11 01:55:02 atm 
    Calling /global/cfs/cdirs/m4746/Projects/Ocean-CDR-Atlas-v0/codes/cesm2.2.0/cime/src/components/data_comps_mct/datm/cime_config/buildnml
 copying /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/user_datm.streams.txt.presaero.clim_1850 -> /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/Buildconf/datmconf/datm.streams.txt.presaero.clim_1850
 copying /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/user_datm.streams.txt.co2tseries.omip -> /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/Buildconf/datmconf/datm.streams.txt.co2tseries.omip
@@ -185,25 +185,25 @@ copying /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cd
 copying /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/Buildconf/datmconf/datm.streams.txt.CORE_IAF_JRA_1p4_2018.NCEP.V_10 -> /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run
 copying /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/Buildconf/datmconf/datm.streams.txt.CORE_IAF_JRA_1p4_2018.NCEP.Q_10 -> /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run
 copying /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/Buildconf/datmconf/datm.streams.txt.CORE_IAF_JRA_1p4_2018.NCEP.T_10 -> /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run
-  2025-02-05 04:11:59 lnd 
+  2025-03-11 01:55:04 lnd 
    Calling /global/cfs/cdirs/m4746/Projects/Ocean-CDR-Atlas-v0/codes/cesm2.2.0/cime/src/components/stub_comps_mct/slnd/cime_config/buildnml
-  2025-02-05 04:11:59 ice 
+  2025-03-11 01:55:04 ice 
    Calling /global/cfs/cdirs/m4746/Projects/Ocean-CDR-Atlas-v0/codes/cesm2.2.0/components/cice//cime_config/buildnml
-  2025-02-05 04:11:59 ocn 
+  2025-03-11 01:55:05 ocn 
    Calling /global/cfs/cdirs/m4746/Projects/Ocean-CDR-Atlas-v0/codes/cesm2.2.0/components/pop//cime_config/buildnml
-  2025-02-05 04:12:04 rof 
+  2025-03-11 01:55:13 rof 
    Calling /global/cfs/cdirs/m4746/Projects/Ocean-CDR-Atlas-v0/codes/cesm2.2.0/cime/src/components/data_comps_mct/drof/cime_config/buildnml
 copying /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/Buildconf/drofconf/drof_in -> /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run
 copying /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/Buildconf/drofconf/drof.streams.txt.rof.iaf_jra_1p4_2018 -> /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run
-  2025-02-05 04:12:04 glc 
+  2025-03-11 01:55:15 glc 
    Calling /global/cfs/cdirs/m4746/Projects/Ocean-CDR-Atlas-v0/codes/cesm2.2.0/cime/src/components/stub_comps_mct/sglc/cime_config/buildnml
-  2025-02-05 04:12:04 wav 
+  2025-03-11 01:55:15 wav 
    Calling /global/cfs/cdirs/m4746/Projects/Ocean-CDR-Atlas-v0/codes/cesm2.2.0/components/ww3//cime_config/buildnml
-  2025-02-05 04:12:05 iac 
+  2025-03-11 01:55:16 iac 
    Running /global/cfs/cdirs/m4746/Projects/Ocean-CDR-Atlas-v0/codes/cesm2.2.0/cime/src/components/stub_comps_mct/siac/cime_config/buildnml 
-  2025-02-05 04:12:05 esp 
+  2025-03-11 01:55:16 esp 
    Calling /global/cfs/cdirs/m4746/Projects/Ocean-CDR-Atlas-v0/codes/cesm2.2.0/cime/src/components/stub_comps_mct/sesp/cime_config/buildnml
-  2025-02-05 04:12:05 cpl 
+  2025-03-11 01:55:16 cpl 
    Calling /global/cfs/cdirs/m4746/Projects/Ocean-CDR-Atlas-v0/codes/cesm2.2.0/cime/src/drivers/mct/cime_config/buildnml
 copying /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/Buildconf/cplconf/drv_in -> /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run
 copying /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/Buildconf/cplconf/seq_maps.rc -> /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run
@@ -252,7 +252,7 @@ copying /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_So
  - Checking for required input datasets in DIN_LOC_ROOT
 -------------------------------------------------------------------------
 run command is srun  --label  -n 823 -N 7 -c 2  --cpu_bind=cores   -m plane=128 /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/bld/cesm.exe   >> cesm.log.$LID 2>&1  
-copying /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run/timing/model_timing_stats -> /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/timing/cesm_timing_stats.35210943.250205-041156
+copying /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run/timing/model_timing_stats -> /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/timing/cesm_timing_stats.36527481.250311-015500
 check for resubmit
 dout_s True 
 mach perlmutter 
@@ -260,13 +260,13 @@ resubmit_num 0
 Submit job case.st_archive
 Starting job script case.st_archive
 st_archive starting
-moving /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run/rof.log.35210943.250205-041156.gz to /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/data/archive/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/logs/rof.log.35210943.250205-041156.gz
-moving /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run/wav.log.35210943.250205-041156.gz to /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/data/archive/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/logs/wav.log.35210943.250205-041156.gz
-moving /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run/cesm.log.35210943.250205-041156.gz to /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/data/archive/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/logs/cesm.log.35210943.250205-041156.gz
-moving /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run/ice.log.35210943.250205-041156.gz to /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/data/archive/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/logs/ice.log.35210943.250205-041156.gz
-moving /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run/ocn.log.35210943.250205-041156.gz to /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/data/archive/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/logs/ocn.log.35210943.250205-041156.gz
-moving /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run/cpl.log.35210943.250205-041156.gz to /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/data/archive/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/logs/cpl.log.35210943.250205-041156.gz
-moving /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run/atm.log.35210943.250205-041156.gz to /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/data/archive/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/logs/atm.log.35210943.250205-041156.gz
+moving /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run/rof.log.36527481.250311-015500.gz to /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/data/archive/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/logs/rof.log.36527481.250311-015500.gz
+moving /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run/ice.log.36527481.250311-015500.gz to /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/data/archive/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/logs/ice.log.36527481.250311-015500.gz
+moving /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run/cesm.log.36527481.250311-015500.gz to /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/data/archive/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/logs/cesm.log.36527481.250311-015500.gz
+moving /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run/ocn.log.36527481.250311-015500.gz to /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/data/archive/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/logs/ocn.log.36527481.250311-015500.gz
+moving /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run/atm.log.36527481.250311-015500.gz to /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/data/archive/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/logs/atm.log.36527481.250311-015500.gz
+moving /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run/wav.log.36527481.250311-015500.gz to /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/data/archive/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/logs/wav.log.36527481.250311-015500.gz
+moving /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/run/cpl.log.36527481.250311-015500.gz to /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/data/archive/smyle.cdr-atlas-v0.glb-dor_South_229_1999-01-01_02316.001/logs/cpl.log.36527481.250311-015500.gz
 -------------------------------------------
 Archiving restarts for date date(1999, 1, 1, 0, 38, 36)
 -------------------------------------------

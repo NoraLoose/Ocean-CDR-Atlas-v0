@@ -2,10 +2,13 @@ import os
 from subprocess import check_call
 from glob import glob
 
+import itertools
 import uuid
 import time
+import warnings
 
 from tqdm.notebook import tqdm
+
 
 import json
 import textwrap
@@ -79,6 +82,8 @@ def submit_bundle(cases, n_bundle=100, nodes_per_case=7, queue="regular"):
         #SBATCH --time=10:00:00
         #SBATCH --exclusive
         #SBATCH --constraint=cpu
+
+        set -e
         
         module load python
         
@@ -419,8 +424,7 @@ class global_irf_map(object):
             df_build = self.df.loc[self.cases[0] : self.cases[0]]
 
         elif phase == "test":
-            df_build = self.df.iloc[1:10]
-
+            df_build = self.df.iloc[1:2]
         elif phase == "deploy":
             df_build = self.df.iloc[:]
 
@@ -506,6 +510,17 @@ class global_irf_map(object):
             & ~(self.df_case_status.Queued)
         ].index.to_list()
 
+        for case in self.df_case_status.loc[self.df_case_status.archive].index:
+            # get case data files
+            files = sorted(
+                glob(
+                    f"{archive_root}/{case}/ocn/hist/{case}.pop.h.[0-9][0-9][0-9][0-9]-[0-9][0-9].nc"
+                )
+            )
+            if not files:
+                if case not in caselist:
+                    caselist.append(case)
+
         if caselist:
             print("the following cases may have failed:")
             for case in caselist:
@@ -535,7 +550,10 @@ class global_irf_map(object):
 
         self.dask_cluster = None
         if not all(zarr_stores_exist) or clobber:
-            self.dask_cluster = machine.dask_cluster()
+            self.dask_cluster = machine.dask_cluster(wallclock="06:00:00")
+
+        for case in tqdm(caselist):
+            ds_out = self._validate_case(case, clobber, no_load=True)
 
         rows = []
         for case in tqdm(caselist):
@@ -559,7 +577,7 @@ class global_irf_map(object):
             self.dask_cluster.shutdown()
             self.dask_cluster = None
 
-    def analyze(self, clobber=False, n=None):
+    def analyze(self, clobber=False):
         """perform analysis and generate output datasets"""
 
         caselist = self.df_case_status.loc[
@@ -570,29 +588,31 @@ class global_irf_map(object):
             filter(lambda c: self.df.loc[c].cdr_forcing is not None, caselist)
         )
 
-        if n is not None:
-            caselist = caselist[:n]
-
-        zarr_stores_exist = [
-            os.path.exists(self.paths_case(case)["analyze"]) for case in caselist
-        ]
-
-        self.dask_cluster = None
-        if not all(zarr_stores_exist) or clobber:
-            self.dask_cluster = machine.dask_cluster()
+        n = 50
+        groups = list(itertools.zip_longest(*(iter(caselist),) * n))
 
         rows = []
-        for case in tqdm(caselist):
-            if "control" in case:
-                continue
-            zarr_path = self._analyze_case(case, clobber)
-            rows.append(dict(case=case, zarr_path=zarr_path))
+        for group in groups:
+            caselist_i = [i for i in group if i is not None]
+            zarr_stores_exist = [
+                os.path.exists(self.paths_case(case)["analyze"]) for case in caselist_i
+            ]
+
+            self.dask_cluster = None
+            if not all(zarr_stores_exist) or clobber:
+                self.dask_cluster = machine.dask_cluster()
+
+            for case in tqdm(caselist_i):
+                if "control" in case:
+                    continue
+                zarr_path = self._analyze_case(case, clobber)
+                rows.append(dict(case=case, zarr_path=zarr_path))
+
+            if self.dask_cluster is not None:
+                self.dask_cluster.shutdown()
+                self.dask_cluster = None
 
         self.df_analysis = pd.DataFrame(rows).set_index("case")
-
-        if self.dask_cluster is not None:
-            self.dask_cluster.shutdown()
-            self.dask_cluster = None
 
     def visualize(self, clobber=False):
         """run visualization notebooks"""
@@ -677,12 +697,15 @@ class global_irf_map(object):
             analyze=f"{path_analysis_data}/{case}.analysis.zarr",
         )
 
-    def _validate_case(self, case, clobber=False):
+    def _validate_case(self, case, clobber=False, no_load=False):
         """compute validation dataset and persist as Zarr store"""
 
         zarr_store = self.paths_case(case)["validate"]
         if os.path.exists(zarr_store) and not clobber:
-            return xr.open_zarr(zarr_store)
+            if no_load:
+                return
+            else:
+                return xr.open_zarr(zarr_store)
 
         else:
             caseinfo = self.df.loc[case]
@@ -714,7 +737,9 @@ class global_irf_map(object):
                 time_case = self.time_baseline
 
             len_time = len(time_case)
-            assert len(files) == len_time, f"{len(files)} found -- expected {len_time}"
+            assert (
+                len(files) == len_time
+            ), f"{case}:\n{len(files)} found -- expected {len_time}"
 
             # read the data
             chunk_spec = {"nlat": -1, "nlon": -1, "z_t": 60}
@@ -803,12 +828,15 @@ class global_irf_map(object):
                         ds_out[f"{v_case}_diff"].data = (
                             ds[v_case] - ds_ref[v_ref]
                         ).isel(**isel_slab)
-            ds_out = ds_out.compute()
+            try:
+                ds_out = ds_out.compute()
+            except:
+                print(f"FAILED!\n{case}")
+                raise
 
             ds_out.to_zarr(
                 zarr_store,
                 mode="w",
-                consolidated=True,
             )
 
             return ds_out
@@ -822,11 +850,12 @@ class global_irf_map(object):
 
         ds = analysis.open_gx1v7_dataset(case, stream="pop.h")
         ds_out = analysis.reduction(ds).compute()
-        ds_out.to_zarr(
-            zarr_store,
-            mode="w",
-            consolidated=True,
-        )
+
+        with warnings.catch_warnings(action="ignore"):
+            ds_out.to_zarr(
+                zarr_store,
+                mode="w",
+            )
 
         return zarr_store
 

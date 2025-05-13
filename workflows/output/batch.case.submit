@@ -6,15 +6,8 @@ module load python
 i=0
 pids=()
 
-cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_042_1999-04-01_00769.single
-./case.submit &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/submit-out/smyle.cdr-atlas-v0.glb-dor_North_Pacific_basin_042_1999-04-01_00769.single.submit &
-
-pids[${i}]=$!
-i=$(($i+1))
-
-
-cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_008_1999-07-01_00034.single
-./case.submit &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/submit-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_008_1999-07-01_00034.single.submit &
+cd /global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/cases/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_000_1999-01-01_00000.bld-hdf5-005
+./case.submit &> /global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/output/submit-out/smyle.cdr-atlas-v0.glb-dor_North_Atlantic_basin_000_1999-01-01_00000.bld-hdf5-005.submit &
 
 pids[${i}]=$!
 i=$(($i+1))

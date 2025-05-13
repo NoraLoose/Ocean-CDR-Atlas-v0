@@ -1,0 +1,108 @@
+Running Atlas Workflow:
+CDR Forcing: DOR
+Phase: deploy
+Vintage: 001
+(clobber=False)
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+  0%|          | 0/50 [00:00<?, ?it/s]
+spinning up dask cluster with scheduler:
+  /pscratch/sd/m/mattlong/Ocean-CDR-Atlas-v0/dask/dask_scheduler_file.9e4_6bzu.json
+cluster running...
+Dashboard:
+ https://jupyter.nersc.gov//user/mattlong/perlmutter-login-node-base/proxy/10.249.11.38:8787/status
+  0%|          | 0/50 [00:00<?, ?it/s]
+2025-03-31 18:06:50,191 - distributed.client - ERROR - Failed to reconnect to scheduler after 30.00 seconds, closing client
+Traceback (most recent call last):
+  File "/global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/run_postprocess.py", line 36, in <module>
+    main()
+  File "/global/homes/m/mattlong/.conda/envs/cworthy/lib/python3.12/site-packages/click/core.py", line 1157, in __call__
+    return self.main(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/homes/m/mattlong/.conda/envs/cworthy/lib/python3.12/site-packages/click/core.py", line 1078, in main
+    rv = self.invoke(ctx)
+         ^^^^^^^^^^^^^^^^
+  File "/global/homes/m/mattlong/.conda/envs/cworthy/lib/python3.12/site-packages/click/core.py", line 1434, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/homes/m/mattlong/.conda/envs/cworthy/lib/python3.12/site-packages/click/core.py", line 783, in invoke
+    return __callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/run_postprocess.py", line 33, in main
+    calc.analyze(clobber=clobber)
+  File "/global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/atlas.py", line 617, in analyze
+    self.dask_cluster.shutdown()
+  File "/global/u2/m/mattlong/codes/Ocean-CDR-Atlas-v0/workflows/machine.py", line 107, in shutdown
+    self.client.shutdown()
+  File "/global/homes/m/mattlong/.conda/envs/cworthy/lib/python3.12/site-packages/distributed/client.py", line 2029, in shutdown
+    return self.sync(self._shutdown)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/global/homes/m/mattlong/.conda/envs/cworthy/lib/python3.12/site-packages/distributed/utils.py", line 363, in sync
+    return sync(
+           ^^^^^
+  File "/global/homes/m/mattlong/.conda/envs/cworthy/lib/python3.12/site-packages/distributed/utils.py", line 439, in sync
+    raise error
+  File "/global/homes/m/mattlong/.conda/envs/cworthy/lib/python3.12/site-packages/distributed/utils.py", line 413, in f
+    result = yield future
+             ^^^^^^^^^^^^
+  File "/global/homes/m/mattlong/.conda/envs/cworthy/lib/python3.12/site-packages/tornado/gen.py", line 766, in run
+    value = future.result()
+            ^^^^^^^^^^^^^^^
+  File "/global/homes/m/mattlong/.conda/envs/cworthy/lib/python3.12/site-packages/distributed/client.py", line 2015, in _shutdown
+    await self.scheduler.terminate()
+          ^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'terminate'
+Exception ignored in: <function Client.__del__ at 0x7f1f7282d580>
+Traceback (most recent call last):
+  File "/global/homes/m/mattlong/.conda/envs/cworthy/lib/python3.12/site-packages/distributed/client.py", line 1742, in __del__
+  File "/global/homes/m/mattlong/.conda/envs/cworthy/lib/python3.12/site-packages/distributed/client.py", line 1997, in close
+  File "/global/homes/m/mattlong/.conda/envs/cworthy/lib/python3.12/site-packages/distributed/utils.py", line 433, in sync
+TimeoutError: timed out after 60 s.

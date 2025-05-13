@@ -164,7 +164,7 @@ def reduction(ds):
                 pCO2_ADD_SURF=pco2_add_surf,
             )
         )
-        .drop(["TAREA", "z_t"])
+        .drop_vars(["TAREA", "z_t"])
         .set_coords(["AREA_M2"])
     )
     dso.attrs["case"] = ds.title

@@ -19,7 +19,7 @@ JUPYTERHUB_URL = "https://jupyter.nersc.gov"
 class dask_cluster(object):
     """ad hoc script to launch a dask cluster"""
 
-    def __init__(self):
+    def __init__(self, wallclock="04:00:00"):
         path_dask = f"{SCRATCH}/dask"
         os.makedirs(path_dask, exist_ok=True)
 
@@ -35,7 +35,7 @@ class dask_cluster(object):
             #SBATCH --qos=premium
             #SBATCH --nodes=4
             #SBATCH --ntasks=64
-            #SBATCH --time=04:00:00
+            #SBATCH --time={wallclock}
             #SBATCH --constraint=cpu
             #SBATCH --error {path_dask}/dask-workers/dask-worker-%J.err
             #SBATCH --output {path_dask}/dask-workers/dask-worker-%J.out
