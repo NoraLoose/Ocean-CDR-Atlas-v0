@@ -147,7 +147,8 @@ submit_polygon_job() {
     
     # Replace the python command to include the correct polygon ID
     sed -i "s/python research_grade_data\.py process-all-cases --polygon 1/python research_grade_data\.py process-all-cases --polygon ${polygon_id}/" $temp_script
-    sed -i "s/python dor_cli\.py vis build-pyramid -p 1/python dor_cli\.py vis build-pyramid -p ${polygon_id}/" $temp_script
+    sed -i "s/python dor_cli\.py vis populate-store2 -p 1/python dor_cli\.py vis populate-store2 -p ${polygon_id}/" $temp_script
+    sed -i "s/python dor_cli\.py vis populate-store3 -p 1/python dor_cli\.py vis populate-store3 -p ${polygon_id}/" $temp_script
     sed -i "s/python process_fg_co2_excess\.py -p 1/python process_fg_co2_excess\.py -p ${polygon_id}/" $temp_script
     
     # submit the job and capture both job ID and error messages
