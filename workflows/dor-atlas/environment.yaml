@@ -1,0 +1,36 @@
+name: dor
+channels:
+    - conda-forge
+    - nodefaults
+dependencies:
+    - awscli
+    - cf-xarray>=0.10.4
+    - cftime
+    - click
+    - dask
+    - distributed
+    - fastparquet
+    - gsw
+    - ipywidgets
+    - joblib
+    - jupyterlab
+    - loky 
+    - matplotlib
+    - ndpyramid
+    - netcdf4
+    - pip
+    - pooch
+    - pop-tools
+    - pre-commit
+    - pydantic
+    - pydantic-settings
+    - python=3.12
+    - rich 
+    - rioxarray
+    - ruff
+    - s3fs
+    - s5cmd
+    - typer
+    - xarray
+    - xesmf
+    - zarr<3
