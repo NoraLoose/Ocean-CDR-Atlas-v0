@@ -10,7 +10,7 @@ codename = "cesm2.2.0"
 remote = "git@github.com:CWorthy-ocean/cesm2.2.0.git"
 
 machine_name = "perlmutter"
-account = "m4746"
+account = "m4632"
 
 kernel_name = "python3"
 

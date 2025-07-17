@@ -41,7 +41,7 @@ def create_smyle_clone(
     ), f"Case {case} exists; caseroot:\n{caseroot}\n"
 
     if cdr_forcing is not None:
-        assert cdr_forcing in ["OAE", "DOR"], f"Unknown CDR forcing: {cdr_forcing}"
+        assert cdr_forcing in ["OAE", "DOR", "ERW"], f"Unknown CDR forcing: {cdr_forcing}"
 
     rundir = f"{paths['scratch']}/{case}/run"
     blddir = f"{paths['scratch']}/{case}/bld"
@@ -228,26 +228,44 @@ def create_smyle_clone(
     user_nl = dict()
 
     print(cdr_forcing)
+
+    alk_forcing_scale_factor = 1.0
+    dic_forcing_scale_factor = -1.0
     if cdr_forcing is None:
         lalk_forcing_apply_file_flux = ".false."
         ldic_forcing_apply_file_flux = ".false."
         cdr_forcing_file = "dummy-file-path"
         atm_alt_co2_opt = "const"
+        alk_forcing_scale_factor = 1.0
+        dic_forcing_scale_factor = -1.0        
 
     elif cdr_forcing == "OAE":
         lalk_forcing_apply_file_flux = ".true."
         ldic_forcing_apply_file_flux = ".false."
         atm_alt_co2_opt = "drv_diag"
-
+        alk_forcing_scale_factor = 1.0
+        dic_forcing_scale_factor = -1.0
+        
     elif cdr_forcing == "DOR":
         lalk_forcing_apply_file_flux = ".false."
         ldic_forcing_apply_file_flux = ".true."
         atm_alt_co2_opt = "drv_diag"
-
+        alk_forcing_scale_factor = 1.0
+        dic_forcing_scale_factor = -1.0
+    
+    elif cdr_forcing == "ERW":
+        lalk_forcing_apply_file_flux = ".true."
+        ldic_forcing_apply_file_flux = ".true."
+        atm_alt_co2_opt = "drv_diag"
+        alk_forcing_scale_factor = 1.0
+        dic_forcing_scale_factor = 1.0
+        
     user_nl["marbl"] = textwrap.dedent(
         f"""\
         lalk_forcing_apply_flux = {lalk_forcing_apply_file_flux}
-        ldic_forcing_apply_flux = {ldic_forcing_apply_file_flux}        
+        ldic_forcing_apply_flux = {ldic_forcing_apply_file_flux}
+        alk_forcing_scale_factor = {alk_forcing_scale_factor}
+        dic_forcing_scale_factor = {dic_forcing_scale_factor}
         """
     )
 
@@ -509,8 +527,10 @@ def case_status(vintage=None, caselist=None, path_cases=None):
         CaseStatus = f"{caseroot}/CaseStatus"
         timing_files = sorted(glob(f"{caseroot}/timing/cesm_timing.{case}.*"))
 
-        with open(CaseStatus, "r") as fid:
-            lines = fid.readlines()
+        lines = []
+        if os.path.exists(CaseStatus):
+            with open(CaseStatus, "r") as fid:
+                lines = fid.readlines()
 
         timestamp_run = None
         for l in lines:

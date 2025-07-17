@@ -321,6 +321,15 @@ class global_irf_map(object):
             South=300,
             Southern_Ocean=40,
         )
+
+        coastal_polygons = dict(
+                    North_Atlantic_basin=list(range(90)),
+                    North_Pacific_basin=list(range(100)),
+                    South=list(range(120)),
+                    Southern_Ocean=[],
+                )  
+    
+        
         start_dates = ["1999-01", "1999-04", "1999-07", "1999-10"]
         ref_dates = ["0347-01-01", "0347-04-01", "0347-07-01", "0347-10-01"]
         cdr_forcing_path = "/global/cfs/projectdirs/m4746/Projects/OAE-Efficiency-Map/data/alk-forcing/OAE-Efficiency-Map"
@@ -369,6 +378,11 @@ class global_irf_map(object):
             for p in range(0, n):
                 polygon_master_index += 1
 
+                # skip non-coastal polygons if ERW
+                if self.cdr_forcing == "ERW":
+                    if p not in coastal_polygons[b]:
+                        continue
+                        
                 for i, d in enumerate(start_dates):
 
                     file = f"{cdr_forcing_path}/alk-forcing-{b}.{p:03d}-{d}.nc"
@@ -470,6 +484,7 @@ class global_irf_map(object):
         if building_jobs:
             print(f"waiting on {len(building_jobs)} build(s)")
 
+        
         while building_jobs:
             building_jobs = machine.building_jobids()
             print("...", end="")
@@ -830,15 +845,13 @@ class global_irf_map(object):
                         ).isel(**isel_slab)
             try:
                 ds_out = ds_out.compute()
+                ds_out.to_zarr(
+                    zarr_store,
+                    mode="w",
+                )                
             except:
                 print(f"FAILED!\n{case}")
-                raise
-
-            ds_out.to_zarr(
-                zarr_store,
-                mode="w",
-            )
-
+                
             return ds_out
 
     def _analyze_case(self, case, clobber=False):
