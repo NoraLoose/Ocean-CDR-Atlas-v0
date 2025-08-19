@@ -32,7 +32,7 @@ class dask_cluster(object):
             #!/bin/bash
             #SBATCH --job-name dask-worker
             #SBATCH --account {account}
-            #SBATCH --qos=premium
+            #SBATCH --qos=regular
             #SBATCH --nodes=4
             #SBATCH --ntasks=64
             #SBATCH --time={wallclock}

@@ -24,14 +24,16 @@ cesm_inputdata = paths["cesm_inputdata_ro"]
 def create_smyle_clone(
     case,
     refdate="0347-01-01",
-    queue="regular",
+    #queue="regular",
+    queue="debug",
     cdr_forcing=None,
-    cdr_forcing_file=None,
+    cdr_forcing_files=None,
     clobber=False,
     curtail_output=True,
     stop_n=15,
     stop_option="nyear",
-    wallclock="10:00:00",
+    #wallclock="10:00:00",
+    wallclock="30:00",
     resubmit=0,
 ):
 
@@ -40,8 +42,14 @@ def create_smyle_clone(
         not os.path.exists(caseroot) or clobber
     ), f"Case {case} exists; caseroot:\n{caseroot}\n"
 
+    allowed_cdr_forcings = ["OAE", "DOR", "ERW", "ANTITRACER"]
     if cdr_forcing is not None:
-        assert cdr_forcing in ["OAE", "DOR", "ERW"], f"Unknown CDR forcing: {cdr_forcing}"
+        assert cdr_forcing in allowed_cdr_forcings, f"Unknown CDR forcing: {cdr_forcing}"
+
+    # Validate cdr_forcing_files if ANTITRACER is chosen
+    if cdr_forcing == "ANTITRACER":
+        assert isinstance(cdr_forcing_files, list), "For 'ANTITRACER' forcing, 'cdr_forcing_files' must be a list of file paths."
+        assert len(cdr_forcing_files) > 0, "For 'ANTITRACER' forcing, 'cdr_forcing_files' list cannot be empty."
 
     rundir = f"{paths['scratch']}/{case}/run"
     blddir = f"{paths['scratch']}/{case}/bld"
@@ -115,7 +123,12 @@ def create_smyle_clone(
     xmlchange("CICE_DECOMPTYPE='sectrobin'")
     xmlchange("CICE_DECOMPSETTING='square-ice'")
 
-    xmlchange("OCN_TRACER_MODULES='iage ecosys'")
+    if cdr_forcing == "ANTITRACER":
+        xmlchange(f"ANTITRACER_TRACER_CNT={len(cdr_forcing_files)}")
+        xmlchange(f"OCN_TRACER_MODULES='antitracer'")
+    else:
+        xmlchange("OCN_TRACER_MODULES='iage ecosys'")
+
     xmlchange("DATM_PRESAERO='clim_1850'")
 
     xmlchange("POP_AUTO_DECOMP=FALSE")
@@ -227,59 +240,79 @@ def create_smyle_clone(
     # namelist
     user_nl = dict()
 
-    print(cdr_forcing)
-
+    # Initialize variables for other CDR forcings (if not "ANTITRACER")
+    lalk_forcing_apply_file_flux = ".false."
+    ldic_forcing_apply_file_flux = ".false."
     alk_forcing_scale_factor = 1.0
     dic_forcing_scale_factor = -1.0
+    atm_alt_co2_opt = "const"
+    # Ensure cdr_forcing_file is defined as a dummy if not explicitly used
+    # This prevents an unbound local error if cdr_forcing is None or ANTITRACER.
+    _cdr_forcing_file = "dummy-file-path" # Use a temp variable here
+
     if cdr_forcing is None:
-        lalk_forcing_apply_file_flux = ".false."
-        ldic_forcing_apply_file_flux = ".false."
-        cdr_forcing_file = "dummy-file-path"
-        atm_alt_co2_opt = "const"
-        alk_forcing_scale_factor = 1.0
-        dic_forcing_scale_factor = -1.0        
+        pass # Defaults are already set above
 
     elif cdr_forcing == "OAE":
         lalk_forcing_apply_file_flux = ".true."
-        ldic_forcing_apply_file_flux = ".false."
         atm_alt_co2_opt = "drv_diag"
-        alk_forcing_scale_factor = 1.0
-        dic_forcing_scale_factor = -1.0
-        
+        _cdr_forcing_file = cdr_forcing_files[0] if cdr_forcing_files else "dummy-file-path"
+
     elif cdr_forcing == "DOR":
-        lalk_forcing_apply_file_flux = ".false."
         ldic_forcing_apply_file_flux = ".true."
         atm_alt_co2_opt = "drv_diag"
-        alk_forcing_scale_factor = 1.0
-        dic_forcing_scale_factor = -1.0
-    
+        _cdr_forcing_file = cdr_forcing_files[0] if cdr_forcing_files else "dummy-file-path"
+
     elif cdr_forcing == "ERW":
         lalk_forcing_apply_file_flux = ".true."
         ldic_forcing_apply_file_flux = ".true."
         atm_alt_co2_opt = "drv_diag"
-        alk_forcing_scale_factor = 1.0
-        dic_forcing_scale_factor = 1.0
-        
-    user_nl["marbl"] = textwrap.dedent(
-        f"""\
-        lalk_forcing_apply_flux = {lalk_forcing_apply_file_flux}
-        ldic_forcing_apply_flux = {ldic_forcing_apply_file_flux}
-        alk_forcing_scale_factor = {alk_forcing_scale_factor}
-        dic_forcing_scale_factor = {dic_forcing_scale_factor}
-        """
-    )
+        _cdr_forcing_file = cdr_forcing_files[0] if cdr_forcing_files else "dummy-file-path"
 
-    user_nl["pop"] = textwrap.dedent(
-        f"""\
-        atm_alt_co2_opt = '{atm_alt_co2_opt}'
-        lecosys_tavg_alt_co2 = .true.
-        alk_forcing_shr_stream_year_first = 1999
-        alk_forcing_shr_stream_year_last = 2019
-        alk_forcing_shr_stream_year_align = 347
-        alk_forcing_shr_stream_file = '{cdr_forcing_file}'
-        alk_forcing_shr_stream_scale_factor = 1.0e5 ! convert from mol/m^2/s to nmol/cm^2/s
-        """
-    )
+    elif cdr_forcing == "ANTITRACER":
+        # No specific lalk_forcing_apply_file_flux or ldic_forcing_apply_file_flux needed
+        # as the antitracer module handles its own forcing logic.
+
+        # Generate antitracer-specific namelist entries for user_nl_pop
+        antitracer_nl_entries = []
+        for i, fpath in enumerate(cdr_forcing_files):
+            # Using 1-based indexing for namelist arrays
+            idx = i + 1
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%name = 'ANTITRACER{idx}'")
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%file = '{fpath}'")
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%varname = 'alk_forcing{idx}'")
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_first = 1999")
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_last = 2019")
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_align = 347")
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%scale_factor = 1.0e4")
+
+        user_nl["pop"] = textwrap.dedent(
+            f"""\
+            {''.join([f'{entry}\n' for entry in antitracer_nl_entries])}
+            """
+        )
+
+    if cdr_forcing != "ANTITRACER":
+        user_nl["marbl"] = textwrap.dedent(
+            f"""\
+            lalk_forcing_apply_flux = {lalk_forcing_apply_file_flux}
+            ldic_forcing_apply_flux = {ldic_forcing_apply_file_flux}
+            alk_forcing_scale_factor = {alk_forcing_scale_factor}
+            dic_forcing_scale_factor = {dic_forcing_scale_factor}
+            """
+        )
+
+        user_nl["pop"] = textwrap.dedent(
+            f"""\
+            atm_alt_co2_opt = '{atm_alt_co2_opt}'
+            lecosys_tavg_alt_co2 = .true.
+            alk_forcing_shr_stream_year_first = 1999
+            alk_forcing_shr_stream_year_last = 2019
+            alk_forcing_shr_stream_year_align = 347
+            alk_forcing_shr_stream_file = '{cdr_forcing_file}'
+            alk_forcing_shr_stream_scale_factor = 1.0e5 ! convert from mol/m^2/s to nmol/cm^2/s
+            """
+        )
 
     if curtail_output:
         user_nl["pop"] += textwrap.dedent(
@@ -306,6 +339,7 @@ def create_smyle_clone(
             cwd=scriptroot,
         )
 
+    print(caseroot)
     check_call(
         "module load python && ./case.build --skip-provenance-check",
         cwd=caseroot,

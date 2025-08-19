@@ -71,6 +71,7 @@ def submit_bundle(cases, n_bundle=100, nodes_per_case=7, queue="regular"):
     queue_job_root = f"{scriptroot}/output/bundled-jobs-caselists"
     os.makedirs(queue_job_root, exist_ok=True)
 
+    print(queue)
     header = lambda jobname, n_nodes: textwrap.dedent(
         f"""\
         #!/bin/bash    
@@ -79,7 +80,7 @@ def submit_bundle(cases, n_bundle=100, nodes_per_case=7, queue="regular"):
         #SBATCH --qos={queue}
         #SBATCH --nodes={n_nodes}
         #SBATCH --ntasks-per-node=128
-        #SBATCH --time=10:00:00
+        #SBATCH --time=00:30:00
         #SBATCH --exclusive
         #SBATCH --constraint=cpu
 
@@ -244,6 +245,7 @@ def _build_script(blueprint, case, clobber=False, **kwargs):
     #SBATCH --ntasks=1
     #SBATCH --constraint=cpu
 
+    source /opt/cray/pe/cpe/24.07/restore_lmod_system_defaults.sh
     module purge
     module restore
     module load conda
@@ -289,13 +291,36 @@ pm.engines.papermill_engines._engines["md_jinja"] = md_jinja_engine
 
 class global_irf_map(object):
 
-    def __init__(self, cdr_forcing, vintage):
+    def __init__(self, cdr_forcing, vintage, antitracer_config=None):
         # simulation details
 
         self.blueprint = "smyle"
         self.simulation_name = f"glb-{cdr_forcing.lower()}"
         self.cdr_forcing = cdr_forcing
         self.vintage = vintage
+        self.antitracer_config = antitracer_config
+
+        if self.cdr_forcing == "ANTITRACER":
+            if not isinstance(self.antitracer_config, dict) or not self.antitracer_config:
+                raise ValueError("When cdr_forcing is 'ANTITRACER', 'antitracer_config' must be a single, non-empty dictionary.")
+
+            # Validate the required top-level keys for the single dictionary config
+            if "suffix" not in self.antitracer_config or \
+               "date" not in self.antitracer_config or \
+               "experiments" not in self.antitracer_config:
+               raise ValueError("The 'antitracer_config' dictionary must contain 'suffix', 'date', and 'experiments' keys.")
+
+            # Validate the 'experiments' list itself
+            if not isinstance(self.antitracer_config["experiments"], list) or \
+               not self.antitracer_config["experiments"]:
+               raise ValueError("The 'experiments' value in 'antitracer_config' must be a non-empty list of experiment dictionaries.")
+
+            # Validate each experiment dictionary within the 'experiments' list
+            for exp_dict in self.antitracer_config["experiments"]:
+                if not isinstance(exp_dict, dict) or \
+                   "basin" not in exp_dict or \
+                   "polygon" not in exp_dict:
+                   raise ValueError("Each experiment in 'antitracer_config.experiments' must be a dict with 'basin' and 'polygon' keys.")
 
         # reference case details
         self.reference_case = "g.e22.GOMIPECOIAF_JRA-1p4-2018.TL319_g17.SMYLE.005"
@@ -308,7 +333,6 @@ class global_irf_map(object):
         self.set_experiments()
 
     def set_experiments(self):
-        # forcing specification
         basins = [
             "North_Atlantic_basin",
             "North_Pacific_basin",
@@ -323,93 +347,146 @@ class global_irf_map(object):
         )
 
         coastal_polygons = dict(
-                    North_Atlantic_basin=list(range(90)),
-                    North_Pacific_basin=list(range(100)),
-                    South=list(range(120)),
-                    Southern_Ocean=[],
-                )  
-    
-        
+            North_Atlantic_basin=list(range(90)),
+            North_Pacific_basin=list(range(100)),
+            South=list(range(120)),
+            Southern_Ocean=[],
+        )
+
         start_dates = ["1999-01", "1999-04", "1999-07", "1999-10"]
         ref_dates = ["0347-01-01", "0347-04-01", "0347-07-01", "0347-10-01"]
-        cdr_forcing_path = "/global/cfs/projectdirs/m4746/Projects/OAE-Efficiency-Map/data/alk-forcing/OAE-Efficiency-Map"
+        cdr_forcing_root_path = "/global/cfs/projectdirs/m4746/Projects/OAE-Efficiency-Map/data/alk-forcing/OAE-Efficiency-Map"
 
-        # time axes
-        nyear_case = 15
-        nyear_baseline = 16  # to cover extra months
-        periods = nyear_case * 12  # monthly
+        generic_cdr_files_template = lambda b, p, d: f"{cdr_forcing_root_path}/alk-forcing-{b}.{p:03d}-{d}.nc"
+
+        nyear_case = 1
+        nyear_baseline = 16
+        periods = nyear_case * 12
         self.time_cases = {}
         for k in ref_dates:
             self.time_cases[k] = xr.cftime_range(
                 k, periods=periods, freq="ME", calendar="noleap"
             )
 
-        periods = nyear_baseline * 12  # monthly
+        periods = nyear_baseline * 12
         self.time_baseline = xr.cftime_range(
             ref_dates[0], periods=periods, freq="ME", calendar="noleap"
         )
 
-        # case setup
-        # define Baseline
-        rows = [
-            dict(
-                blueprint=self.blueprint,
-                polygon=None,
-                polygon_master=None,
-                basin=None,
-                start_date=start_dates[0],
-                cdr_forcing=None,
-                cdr_forcing_file=None,
-                case=f"{self.blueprint}.{project_sname}.control.{self.vintage}",
-                simulation_key="baseline",
-                refdate=ref_dates[0],
-                stop_n=nyear_baseline,
-                wallclock="12:00:00",
-                curtail_output=False,
+        # Initialize the list of rows for the DataFrame
+        rows = []
+
+        if self.cdr_forcing != "ANTITRACER":
+            rows.append(
+                dict(
+                    blueprint=self.blueprint,
+                    polygon=None, polygon_master=None, basin=None,
+                    start_date=start_dates[0],
+                    cdr_forcing=None, cdr_forcing_files=None,
+                    case=f"{self.blueprint}.{project_sname}.control.{self.vintage}",
+                    simulation_key="baseline",
+                    refdate=ref_dates[0],
+                    stop_n=nyear_baseline,
+                    wallclock="12:00:00",
+                    curtail_output=False,
+                )
             )
-        ]
 
-        # define cases
-        index = 0
-        polygon_master_index = -1
-        for b in basins:
-            n = npolygon[b]
+        if self.cdr_forcing == "ANTITRACER":
+            group_config = self.antitracer_config
+            global_suffix = group_config["suffix"]
+            common_date = group_config["date"]
 
-            for p in range(0, n):
-                polygon_master_index += 1
+            collected_cdr_files = []
+            varname = "alk_forcing"
 
-                # skip non-coastal polygons if ERW
-                if self.cdr_forcing == "ERW":
-                    if p not in coastal_polygons[b]:
-                        continue
-                        
-                for i, d in enumerate(start_dates):
+            locations_to_aggregate = group_config["experiments"] # Use 'experiments' key
 
-                    file = f"{cdr_forcing_path}/alk-forcing-{b}.{p:03d}-{d}.nc"
-                    assert os.path.exists(file), file
+            for location_dict in locations_to_aggregate:
+                b = location_dict["basin"]
+                p = location_dict["polygon"]
+                d = common_date 
 
-                    loc = f"{b}_{p:03d}_{d}-01"
-                    simname = f"{self.simulation_name}_{loc}_{index:05d}"
-                    case = f"{self.blueprint}.{project_sname}.{simname}.{self.vintage}"
+                assert b in basins, f"Configured basin '{b}' not in known basins."
+                assert p < npolygon.get(b, 0), f"Configured polygon '{p}' invalid for basin '{b}'."
+                assert d in start_dates, f"Configured start_date '{d}' not in known start_dates."
 
-                    rows.append(
-                        dict(
-                            blueprint=self.blueprint,
-                            polygon=p,
-                            polygon_master=polygon_master_index,
-                            basin=b,
-                            start_date=d,
-                            cdr_forcing=self.cdr_forcing,
-                            cdr_forcing_file=file,
-                            case=case,
-                            simulation_key=simname,
-                            refdate=ref_dates[i],
-                            stop_n=nyear_case,
-                            wallclock="10:00:00",
-                            curtail_output=True,
+                base_file_path = generic_cdr_files_template(b, p, d)
+                assert os.path.exists(base_file_path), f"Antitracer base forcing file not found: {base_file_path}"
+
+                collected_cdr_files.append(base_file_path)
+
+            # The case name reflects the overall aggregated run, not individual loc_id
+            simname = f"{self.simulation_name}_{common_date}_{global_suffix}"
+            case = f"{self.blueprint}.{project_sname}.{simname}.{self.vintage}"
+
+            try:
+                index = start_dates.index(common_date)
+                ref_date = ref_dates[index]
+            except ValueError:
+                raise ValueError(f"'{start_date}' is not a valid start date.")
+
+            # Add this SINGLE row to the DataFrame
+            rows.append(
+                dict(
+                    blueprint=self.blueprint,
+                    polygon=None, # Polygon is not meaningful for an aggregated run
+                    basin=None,   # Basin is not meaningful for an aggregated run
+                    start_date=common_date,
+                    cdr_forcing=self.cdr_forcing,
+                    cdr_forcing_files=collected_cdr_files, # The collected list of all files
+                    case=case,
+                    simulation_key=simname,
+                    refdate=ref_date,
+                    stop_n=nyear_case,
+                    wallclock="10:00:00",
+                    curtail_output=True,
+                )
+            )
+
+        else: # self.cdr_forcing is not "ANTITRACER" (OAE, DOR, ERW, or None)
+            index = 0
+            polygon_master_index = -1
+            for b in basins:
+                n = npolygon[b]
+
+                for p in range(0, n):
+                    polygon_master_index += 1
+
+                    # skip non-coastal polygons if ERW
+                    if self.cdr_forcing == "ERW":
+                        if p not in coastal_polygons[b]:
+                            continue
+                            
+                    for i, d in enumerate(start_dates):
+
+                        file = f"{cdr_forcing_path}/alk-forcing-{b}.{p:03d}-{d}.nc"
+                        assert os.path.exists(file), file
+
+                        loc = f"{b}_{p:03d}_{d}-01"
+                        simname = f"{self.simulation_name}_{loc}_{index:05d}"
+                        case = f"{self.blueprint}.{project_sname}.{simname}.{self.vintage}"
+
+                        rows.append(
+                            dict(
+                                blueprint=self.blueprint,
+                                polygon=p,
+                                polygon_master=polygon_master_index,
+                                basin=b,
+                                start_date=d,
+                                cdr_forcing=self.cdr_forcing,
+                                cdr_forcing_files=[file],
+                                case=case,
+                                simulation_key=simname,
+                                refdate=ref_dates[i],
+                                stop_n=nyear_case,
+                                wallclock="10:00:00",
+                                curtail_output=True,
+                            )
                         )
-                    )
-                    index += 1
+                        index += 1
+
+        # Assign the built list of rows to the DataFrame
         self.df = pd.DataFrame(rows).set_index("case")
         self.cases = self.df.index.to_list()
 
@@ -467,7 +544,7 @@ class global_irf_map(object):
                     blueprint=caseinfo["blueprint"],
                     case=case,
                     cdr_forcing=caseinfo["cdr_forcing"],
-                    cdr_forcing_file=caseinfo["cdr_forcing_file"],
+                    cdr_forcing_files=caseinfo["cdr_forcing_files"],
                     refdate=caseinfo["refdate"],
                     stop_n=caseinfo["stop_n"],
                     wallclock=caseinfo["wallclock"],
@@ -494,7 +571,7 @@ class global_irf_map(object):
 
         caselist = self.df_case_status.loc[
             (self.df_case_status.build)
-            & ~(self.df_case_status.archive)
+            #& ~(self.df_case_status.archive)
             & ~(self.df_case_status.Queued)
         ].index.to_list()
 
