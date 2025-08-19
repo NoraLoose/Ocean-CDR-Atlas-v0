@@ -36,3 +36,5 @@ dependencies:
 - xesmf
 - xgcm
 - zarr
+- s3fs
+- h5netcdf
