@@ -139,21 +139,33 @@ def create_smyle_clone(
     xmlchange("POP_MXBLCKS=1")
     xmlchange("POP_DECOMPTYPE='spacecurve'")
 
-    # refcase SourceMods
-    check_call(
-        f"cp -vr {scriptroot}/input/cesm2.2.0/cases/{refcase}/SourceMods/* {caseroot}/SourceMods",
-        shell=True,
-    )
-
-    # list SourceMod files
-    src_pop_files = []
+    # Create SourceMods directory first
+    src_pop_dir = f"{caseroot}/SourceMods/src.pop"
+    if not os.path.exists(src_pop_dir):
+        os.makedirs(src_pop_dir)
+    
+    # Create an empty list to store all source files
+    all_source_files = []
+    
+    # Get all SourceMods from the reference case
+    all_source_files.extend(glob(f"{scriptroot}/input/cesm2.2.0/cases/{refcase}/SourceMods/src.pop/*"))
+    
+    # Add curtail_output files if requested
     if curtail_output:
-        src_pop_files.extend(
-            glob(
-                f"{scriptroot}/input/cesm2.2.0/SourceMods/curtail-output-gx1v7/src.pop/*"
-            )
-        )
-
+        all_source_files.extend(glob(f"{scriptroot}/input/cesm2.2.0/SourceMods/curtail-output-gx1v7/src.pop/*"))
+    
+    # Add antitracer specific files
+    if cdr_forcing == "ANTITRACER":
+        
+        # Filter out iage and ecosys files from the complete list
+        src_pop_files = [f for f in all_source_files if 'iage' not in f and 'ecosys' not in f]
+    
+    else: # For other forcings, use the unfiltered list
+        src_pop_files = all_source_files
+    
+    # Remove duplicates by converting to a set and back to a list
+    src_pop_files = list(set(src_pop_files))
+    
     # copy SourceMod files
     for src in src_pop_files:
         src_basename = os.path.basename(src)
@@ -246,8 +258,8 @@ def create_smyle_clone(
     alk_forcing_scale_factor = 1.0
     dic_forcing_scale_factor = -1.0
     atm_alt_co2_opt = "const"
-    # Ensure cdr_forcing_file is defined as a dummy if not explicitly used
-    # This prevents an unbound local error if cdr_forcing is None or ANTITRACER.
+
+    antitracer_on = ".false."
     _cdr_forcing_file = "dummy-file-path" # Use a temp variable here
 
     if cdr_forcing is None:
@@ -270,6 +282,8 @@ def create_smyle_clone(
         _cdr_forcing_file = cdr_forcing_files[0] if cdr_forcing_files else "dummy-file-path"
 
     elif cdr_forcing == "ANTITRACER":
+        
+        antitracer_on = ".true."
         # No specific lalk_forcing_apply_file_flux or ldic_forcing_apply_file_flux needed
         # as the antitracer module handles its own forcing logic.
 
@@ -280,7 +294,7 @@ def create_smyle_clone(
             idx = i + 1
             antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%name = 'ANTITRACER{idx}'")
             antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%file = '{fpath}'")
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%varname = 'alk_forcing{idx}'")
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%varname = 'alk_forcing'")
             antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_first = 1999")
             antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_last = 2019")
             antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_align = 347")
@@ -288,6 +302,7 @@ def create_smyle_clone(
 
         user_nl["pop"] = textwrap.dedent(
             f"""\
+            antitracer_on = {antitracer_on}
             {''.join([f'{entry}\n' for entry in antitracer_nl_entries])}
             """
         )
@@ -304,6 +319,7 @@ def create_smyle_clone(
 
         user_nl["pop"] = textwrap.dedent(
             f"""\
+            antitracer_on = {antitracer_on}
             atm_alt_co2_opt = '{atm_alt_co2_opt}'
             lecosys_tavg_alt_co2 = .true.
             alk_forcing_shr_stream_year_first = 1999
