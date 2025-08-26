@@ -284,11 +284,17 @@ def create_smyle_clone(
     elif cdr_forcing == "ANTITRACER":
         
         antitracer_on = ".true."
+        num_antitracers = len(cdr_forcing_files)
         # No specific lalk_forcing_apply_file_flux or ldic_forcing_apply_file_flux needed
         # as the antitracer module handles its own forcing logic.
 
         # Generate antitracer-specific namelist entries for user_nl_pop
         antitracer_nl_entries = []
+        antitracer_nl_entries.append(f"  antitracer_tracer_cnt = {num_antitracers}")
+        antitracer_nl_entries.append(f"  init_antitracer_option = 'zero'")
+        antitracer_nl_entries.append(f"  init_antitracer_init_file = 'unknown'")
+        antitracer_nl_entries.append(f"  init_antitracer_init_file_fmt = 'bin'")
+
         for i, fpath in enumerate(cdr_forcing_files):
             # Using 1-based indexing for namelist arrays
             idx = i + 1
@@ -300,12 +306,17 @@ def create_smyle_clone(
             antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_align = 347")
             antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%scale_factor = 1.0e4")
 
-        user_nl["pop"] = textwrap.dedent(
+        pop_nl_content = textwrap.dedent(
             f"""\
-            antitracer_on = {antitracer_on}
-            {''.join([f'{entry}\n' for entry in antitracer_nl_entries])}
+            &passive_tracers_on_nml
+              antitracer_on = .true.
+            /
+            &antitracer_nml
+            {''.join(antitracer_nl_entries)}
+            /
             """
         )
+        user_nl["pop"] = pop_nl_content
 
     if cdr_forcing != "ANTITRACER":
         user_nl["marbl"] = textwrap.dedent(
