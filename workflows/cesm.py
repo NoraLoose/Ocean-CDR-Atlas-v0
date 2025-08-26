@@ -124,7 +124,6 @@ def create_smyle_clone(
     xmlchange("CICE_DECOMPSETTING='square-ice'")
 
     if cdr_forcing == "ANTITRACER":
-        xmlchange(f"ANTITRACER_TRACER_CNT={len(cdr_forcing_files)}")
         xmlchange(f"OCN_TRACER_MODULES='antitracer'")
     else:
         xmlchange("OCN_TRACER_MODULES='iage ecosys'")
@@ -252,18 +251,17 @@ def create_smyle_clone(
     # namelist
     user_nl = dict()
 
-    # Initialize variables for other CDR forcings (if not "ANTITRACER")
     lalk_forcing_apply_file_flux = ".false."
     ldic_forcing_apply_file_flux = ".false."
     alk_forcing_scale_factor = 1.0
     dic_forcing_scale_factor = -1.0
     atm_alt_co2_opt = "const"
-
     antitracer_on = ".false."
     _cdr_forcing_file = "dummy-file-path" # Use a temp variable here
 
     if cdr_forcing is None:
-        pass # Defaults are already set above
+        # Use default values
+        pass
 
     elif cdr_forcing == "OAE":
         lalk_forcing_apply_file_flux = ".true."
@@ -282,42 +280,26 @@ def create_smyle_clone(
         _cdr_forcing_file = cdr_forcing_files[0] if cdr_forcing_files else "dummy-file-path"
 
     elif cdr_forcing == "ANTITRACER":
-        
         antitracer_on = ".true."
-        # No specific lalk_forcing_apply_file_flux or ldic_forcing_apply_file_flux needed
-        # as the antitracer module handles its own forcing logic.
+        num_antitracers = len(cdr_forcing_files)
+        xmlchange(f"ANTITRACER_TRACER_CNT={num_antitracers}")
+        xmlchange(f"OCN_TRACER_MODULES='antitracer'")
+        xmlchange(f'ANTITRACER_FORCING_FILES="{":".join(cdr_forcing_files)}"')
 
-        # Generate antitracer-specific namelist entries for user_nl_pop
-        antitracer_nl_entries = []
-        for i, fpath in enumerate(cdr_forcing_files):
-            # Using 1-based indexing for namelist arrays
-            idx = i + 1
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%name = 'ANTITRACER{idx}'")
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%file = '{fpath}'")
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%varname = 'alk_forcing'")
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_first = 1999")
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_last = 2019")
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_align = 347")
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%scale_factor = 1.0e4")
-
-        user_nl["pop"] = textwrap.dedent(
+    pop_nl_content = ""
+    if cdr_forcing == "ANTITRACER":
+        pop_nl_content += textwrap.dedent(
             f"""\
-            antitracer_on = {antitracer_on}
-            {''.join([f'{entry}\n' for entry in antitracer_nl_entries])}
+            &passive_tracers_on_nml
+              antitracer_on = .true.
+            /
+            &antitracer_nml
+              antitracer_tracer_cnt = {num_antitracers}
+            /
             """
         )
-
-    if cdr_forcing != "ANTITRACER":
-        user_nl["marbl"] = textwrap.dedent(
-            f"""\
-            lalk_forcing_apply_flux = {lalk_forcing_apply_file_flux}
-            ldic_forcing_apply_flux = {ldic_forcing_apply_file_flux}
-            alk_forcing_scale_factor = {alk_forcing_scale_factor}
-            dic_forcing_scale_factor = {dic_forcing_scale_factor}
-            """
-        )
-
-        user_nl["pop"] = textwrap.dedent(
+    else:
+        pop_nl_content += textwrap.dedent(
             f"""\
             antitracer_on = {antitracer_on}
             atm_alt_co2_opt = '{atm_alt_co2_opt}'
@@ -326,7 +308,7 @@ def create_smyle_clone(
             alk_forcing_shr_stream_year_last = 2019
             alk_forcing_shr_stream_year_align = 347
             alk_forcing_shr_stream_file = '{cdr_forcing_file}'
-            alk_forcing_shr_stream_scale_factor = 1.0e5 ! convert from mol/m^2/s to nmol/cm^2/s
+            alk_forcing_shr_stream_scale_factor = 1.0e5
             """
         )
 
