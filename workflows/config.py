@@ -4,7 +4,7 @@ import subprocess
 
 # config.yml
 project_name = "Ocean-CDR-Atlas-v0"
-project_sname = "cdr-atlas-v0"
+project_sname = "anti-tracer"
 branch = project_sname
 codename = "cesm2.2.0"
 remote = "git@github.com:CWorthy-ocean/cesm2.2.0.git"
@@ -21,7 +21,7 @@ assert machine_name in ["perlmutter"]
 # directories that might not exist
 paths = dict()
 paths["scratch"] = f"{os.environ['SCRATCH']}/{project_name}"
-dir_project_root = f"/global/cfs/projectdirs/m4746/Projects/{project_name}"
+dir_project_root = f"/global/cfs/projectdirs/m4746/Users/nora/{project_name}"
 paths["data"] = f"{dir_project_root}/data"
 paths["codes"] = (
     f"{dir_project_root}/codes"  # does this need to be known outside config.py?
@@ -65,7 +65,7 @@ if not os.path.exists(paths["src"]):
         p = subprocess.Popen(
             f"git checkout {branch}",
             shell=True,
-            cwd=paths["codes"],
+            cwd=paths["src"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
