@@ -125,7 +125,7 @@ def create_smyle_clone(
 
     if cdr_forcing == "ANTITRACER":
         xmlchange(f"ANTITRACER_TRACER_CNT={len(cdr_forcing_files)}")
-        xmlchange(f"OCN_TRACER_MODULES='antitracer'")
+        xmlchange("OCN_TRACER_MODULES='antitracer'")
     else:
         xmlchange("OCN_TRACER_MODULES='iage ecosys'")
 
@@ -236,6 +236,15 @@ def create_smyle_clone(
             )
         with open(file_out, "w") as fid:
             fid.write(file_str)
+    
+    if cdr_forcing == "ANTITRACER":
+        user_nl_pop_path = f"{caseroot}/user_nl_pop"
+        with open(user_nl_pop_path, "a") as f: # Note: "a" opens the file in append mode
+            print(f"Appending settings to {user_nl_pop_path}")
+            f.write("\n! Appended by setup script to override BGC defaults\n")
+            f.write("&sw_absorption_nml\n")
+            f.write("  chl_option = 'file'\n")
+            f.write("/\n")
 
     # user_datm files
     user_datm_files = glob(f"{scriptroot}/input/cesm2.2.0/cases/{refcase}/user_datm.*")
@@ -290,7 +299,6 @@ def create_smyle_clone(
 
         # Generate antitracer-specific namelist entries for user_nl_pop
         antitracer_nl_entries = []
-        antitracer_nl_entries.append(f"  antitracer_tracer_cnt = {num_antitracers}")
         antitracer_nl_entries.append(f"  init_antitracer_option = 'zero'")
         antitracer_nl_entries.append(f"  init_antitracer_init_file = 'unknown'")
         antitracer_nl_entries.append(f"  init_antitracer_init_file_fmt = 'bin'")
