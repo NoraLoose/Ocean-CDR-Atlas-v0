@@ -240,15 +240,6 @@ def create_smyle_clone(
             )
         with open(file_out, "w") as fid:
             fid.write(file_str)
-    
-    if cdr_forcing == "ANTITRACER":
-        user_nl_pop_path = f"{caseroot}/user_nl_pop"
-        with open(user_nl_pop_path, "a") as f: # Note: "a" opens the file in append mode
-            print(f"Appending settings to {user_nl_pop_path}")
-            f.write("\n! Appended by setup script to override BGC defaults\n")
-            f.write("&sw_absorption_nml\n")
-            f.write("  chl_option = 'file'\n")
-            f.write("/\n")
 
     # user_datm files
     user_datm_files = glob(f"{scriptroot}/input/cesm2.2.0/cases/{refcase}/user_datm.*")
@@ -306,7 +297,6 @@ def create_smyle_clone(
                 idx = i + 1 # Fortran 1-based index
                 varname = f"antitracer_forcing_{master_idx:03d}"
                 forcing_array_entries.append(f"  antitracer_forcing_nml_array({idx})%file = '{fpath}'")
-                forcing_array_entries.append(f"  antitracer_forcing_nml_array({idx})%varname = '{varname}'")
                 forcing_array_entries.append(f"  antitracer_forcing_nml_array({idx})%varname = 'alk_forcing'")
                 forcing_array_entries.append(f"  antitracer_forcing_nml_array({idx})%year_first = 1999")
                 forcing_array_entries.append(f"  antitracer_forcing_nml_array({idx})%year_last = 2019")
@@ -323,8 +313,12 @@ def create_smyle_clone(
                 /
                 &antitracer_nml
                   init_antitracer_option = 'zero'
-                  antitracer_master_indices = {indices_str}
+                  antitracer_master_indices = {indices_str}\n
                   {forcing_array_str}
+                /
+                ! Override BGC defaults for antitracer runs
+                &sw_absorption_nml
+                  chl_option = 'file'
                 /
                 """
             )
