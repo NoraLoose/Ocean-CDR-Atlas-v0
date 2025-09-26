@@ -28,6 +28,7 @@ def create_smyle_clone(
     queue="debug",
     cdr_forcing=None,
     cdr_forcing_files=None,
+    antitracer_master_indices=None,
     clobber=False,
     curtail_output=True,
     stop_n=15,
@@ -50,6 +51,9 @@ def create_smyle_clone(
     if cdr_forcing == "ANTITRACER":
         assert isinstance(cdr_forcing_files, list), "For 'ANTITRACER' forcing, 'cdr_forcing_files' must be a list of file paths."
         assert len(cdr_forcing_files) > 0, "For 'ANTITRACER' forcing, 'cdr_forcing_files' list cannot be empty."
+        assert isinstance(antitracer_master_indices, list), "For 'ANTITRACER' forcing, 'antitracer_master_indices' must be a list."
+        assert len(cdr_forcing_files) == len(antitracer_master_indices), "Mismatch between number of forcing files and master indices."
+
 
     rundir = f"{paths['scratch']}/{case}/run"
     blddir = f"{paths['scratch']}/{case}/bld"
@@ -291,40 +295,40 @@ def create_smyle_clone(
         _cdr_forcing_file = cdr_forcing_files[0] if cdr_forcing_files else "dummy-file-path"
 
     elif cdr_forcing == "ANTITRACER":
-        
-        antitracer_on = ".true."
-        num_antitracers = len(cdr_forcing_files)
-        # No specific lalk_forcing_apply_file_flux or ldic_forcing_apply_file_flux needed
-        # as the antitracer module handles its own forcing logic.
-
-        # Generate antitracer-specific namelist entries for user_nl_pop
-        antitracer_nl_entries = []
-        antitracer_nl_entries.append(f"  init_antitracer_option = 'zero'")
-        antitracer_nl_entries.append(f"  init_antitracer_init_file = 'unknown'")
-        antitracer_nl_entries.append(f"  init_antitracer_init_file_fmt = 'bin'")
-
-        for i, fpath in enumerate(cdr_forcing_files):
-            # Using 1-based indexing for namelist arrays
-            idx = i + 1
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%name = 'ANTITRACER{idx}'")
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%file = '{fpath}'")
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%varname = 'alk_forcing'")
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_first = 1999")
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_last = 2019")
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_align = 347")
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%scale_factor = 1.0e4")
-
-        pop_nl_content = textwrap.dedent(
-            f"""\
-            &passive_tracers_on_nml
-              antitracer_on = .true.
-            /
-            &antitracer_nml
-            {''.join(antitracer_nl_entries)}
-            /
-            """
-        )
-        user_nl["pop"] = pop_nl_content
+            antitracer_on = ".true."
+    
+            # Format the master indices list for the namelist
+            indices_str = ", ".join(map(str, antitracer_master_indices))
+    
+            # Generate the forcing array entries
+            forcing_array_entries = []
+            for i, (fpath, master_idx) in enumerate(zip(cdr_forcing_files, antitracer_master_indices)):
+                idx = i + 1 # Fortran 1-based index
+                varname = f"antitracer_forcing_{master_idx:03d}"
+                forcing_array_entries.append(f"  antitracer_forcing_nml_array({idx})%file = '{fpath}'")
+                forcing_array_entries.append(f"  antitracer_forcing_nml_array({idx})%varname = '{varname}'")
+                forcing_array_entries.append(f"  antitracer_forcing_nml_array({idx})%varname = 'alk_forcing'")
+                forcing_array_entries.append(f"  antitracer_forcing_nml_array({idx})%year_first = 1999")
+                forcing_array_entries.append(f"  antitracer_forcing_nml_array({idx})%year_last = 2019")
+                forcing_array_entries.append(f"  antitracer_forcing_nml_array({idx})%year_align = 347")
+                forcing_array_entries.append(f"  antitracer_forcing_nml_array({idx})%scale_factor = 1.0e4")
+    
+            forcing_array_str = "\n".join(forcing_array_entries)
+    
+            # Assemble the final namelist content for user_nl_pop
+            pop_nl_content = textwrap.dedent(
+                f"""\
+                &passive_tracers_on_nml
+                  antitracer_on = .true.
+                /
+                &antitracer_nml
+                  init_antitracer_option = 'zero'
+                  antitracer_master_indices = {indices_str}
+                  {forcing_array_str}
+                /
+                """
+            )
+            user_nl["pop"] = pop_nl_content
 
     if cdr_forcing != "ANTITRACER":
         user_nl["marbl"] = textwrap.dedent(
