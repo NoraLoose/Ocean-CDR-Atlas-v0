@@ -241,6 +241,15 @@ def create_smyle_clone(
         with open(file_out, "w") as fid:
             fid.write(file_str)
 
+    if cdr_forcing == "ANTITRACER":
+        user_nl_pop_path = f"{caseroot}/user_nl_pop"
+        with open(user_nl_pop_path, "a") as f: # Note: "a" opens the file in append mode
+            print(f"Appending settings to {user_nl_pop_path}")
+            f.write("\n! Appended by setup script to override BGC defaults\n")
+            f.write("&sw_absorption_nml\n")
+            f.write("  chl_option = 'file'\n")
+            f.write("/\n")
+
     # user_datm files
     user_datm_files = glob(f"{scriptroot}/input/cesm2.2.0/cases/{refcase}/user_datm.*")
     for file in user_datm_files:
@@ -286,43 +295,49 @@ def create_smyle_clone(
         _cdr_forcing_file = cdr_forcing_files[0] if cdr_forcing_files else "dummy-file-path"
 
     elif cdr_forcing == "ANTITRACER":
-            antitracer_on = ".true."
+        antitracer_on = ".true."
     
-            # Format the master indices list for the namelist
-            indices_str = ", ".join(map(str, antitracer_master_indices))
+        # Format the master indices list for the namelist
+        indices_str = ", ".join(map(str, antitracer_master_indices))
+
+        # Generate antitracer-specific namelist entries for user_nl_pop
+        antitracer_nl_entries = []
+        antitracer_nl_entries.append(f"  init_antitracer_option = 'zero'")
+        antitracer_nl_entries.append(f"  init_antitracer_init_file = 'unknown'")
+        antitracer_nl_entries.append(f"  init_antitracer_init_file_fmt = 'bin'")
+        antitracer_nl_entries.append(f"  antitracer_master_indices = {indices_str}")
+
+        for i, (fpath, master_idx) in enumerate(zip(cdr_forcing_files, antitracer_master_indices)):
+            idx = i + 1 # Fortran 1-based index
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%name = 'ANTITRACER{master_idx}'")
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%file = '{fpath}'")
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%varname = 'alk_forcing'")
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_first = 1999")
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_last = 2019")
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_align = 347")
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%scale_factor = 1.0e4")
     
-            # Generate the forcing array entries
-            forcing_array_entries = []
-            for i, (fpath, master_idx) in enumerate(zip(cdr_forcing_files, antitracer_master_indices)):
-                idx = i + 1 # Fortran 1-based index
-                varname = f"antitracer_forcing_{master_idx:03d}"
-                forcing_array_entries.append(f"  antitracer_forcing_nml_array({idx})%file = '{fpath}'")
-                forcing_array_entries.append(f"  antitracer_forcing_nml_array({idx})%varname = 'alk_forcing'")
-                forcing_array_entries.append(f"  antitracer_forcing_nml_array({idx})%year_first = 1999")
-                forcing_array_entries.append(f"  antitracer_forcing_nml_array({idx})%year_last = 2019")
-                forcing_array_entries.append(f"  antitracer_forcing_nml_array({idx})%year_align = 347")
-                forcing_array_entries.append(f"  antitracer_forcing_nml_array({idx})%scale_factor = 1.0e4")
-    
-            forcing_array_str = "\n".join(forcing_array_entries)
-    
-            # Assemble the final namelist content for user_nl_pop
-            pop_nl_content = textwrap.dedent(
-                f"""\
-                &passive_tracers_on_nml
-                  antitracer_on = .true.
-                /
-                &antitracer_nml
-                  init_antitracer_option = 'zero'
-                  antitracer_master_indices = {indices_str}\n
-                  {forcing_array_str}
-                /
-                ! Override BGC defaults for antitracer runs
-                &sw_absorption_nml
-                  chl_option = 'file'
-                /
-                """
-            )
-            user_nl["pop"] = pop_nl_content
+        pop_nl_content = textwrap.dedent(
+            f"""\
+            &passive_tracers_on_nml
+              antitracer_on = .true.
+            /
+            &antitracer_nml
+            {''.join(antitracer_nl_entries)}
+            /
+            """
+        )
+
+        user_nl["pop"] = pop_nl_content
+
+        # Write the antitracer_indices.txt file
+        indices_filepath = f"{caseroot}/antitracer_indices.txt"
+
+        # This print statement will appear in your build log
+        print(f"INFO: Writing antitracer indices to {indices_filepath}")
+
+        with open(indices_filepath, "w") as f:
+            f.write(" ".join(map(str, antitracer_master_indices)))
 
     if cdr_forcing != "ANTITRACER":
         user_nl["marbl"] = textwrap.dedent(
