@@ -296,16 +296,12 @@ def create_smyle_clone(
 
     elif cdr_forcing == "ANTITRACER":
         antitracer_on = ".true."
-    
-        # Format the master indices list for the namelist
-        indices_str = ", ".join(map(str, antitracer_master_indices))
 
         # Generate antitracer-specific namelist entries for user_nl_pop
         antitracer_nl_entries = []
         antitracer_nl_entries.append(f"  init_antitracer_option = 'zero'")
         antitracer_nl_entries.append(f"  init_antitracer_init_file = 'unknown'")
         antitracer_nl_entries.append(f"  init_antitracer_init_file_fmt = 'bin'")
-        antitracer_nl_entries.append(f"  antitracer_master_indices = {indices_str}")
 
         for i, (fpath, master_idx) in enumerate(zip(cdr_forcing_files, antitracer_master_indices)):
             idx = i + 1 # Fortran 1-based index

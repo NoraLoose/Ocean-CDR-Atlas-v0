@@ -356,6 +356,7 @@ class global_irf_map(object):
         start_dates = ["1999-01", "1999-04", "1999-07", "1999-10"]
         ref_dates = ["0347-01-01", "0347-04-01", "0347-07-01", "0347-10-01"]
         cdr_forcing_root_path = "/global/cfs/projectdirs/m4746/Projects/OAE-Efficiency-Map/data/alk-forcing/OAE-Efficiency-Map"
+        cdr_forcing_root_path = "/global/cfs/projectdirs/m4746/Users/nora"
 
         generic_cdr_files_template = lambda b, p, d: f"{cdr_forcing_root_path}/alk-forcing-{b}.{p:03d}-{d}.nc"
 
@@ -376,6 +377,14 @@ class global_irf_map(object):
         # Initialize the list of rows for the DataFrame
         rows = []
 
+        # Pre-calculate the master index map for all possible locations
+        polygon_master_map = {}
+        idx = -1
+        for b in basins:
+            for p in range(npolygon[b]):
+                idx += 1
+                polygon_master_map[(b, p)] = idx
+
         if self.cdr_forcing != "ANTITRACER":
             rows.append(
                 dict(
@@ -394,47 +403,46 @@ class global_irf_map(object):
 
         if self.cdr_forcing == "ANTITRACER":
             group_config = self.antitracer_config
-            global_suffix = group_config["suffix"]
-            common_date = group_config["date"]
 
+            antitracer_master_indices = []
             collected_cdr_files = []
-            varname = "alk_forcing"
 
-            locations_to_aggregate = group_config["experiments"] # Use 'experiments' key
+            # Loop through configured experiments to gather info for each tracer
+            for exp_dict in group_config["experiments"]:
+                b = exp_dict["basin"]
+                p = exp_dict["polygon"]
+                d = group_config["date"]
 
-            for location_dict in locations_to_aggregate:
-                b = location_dict["basin"]
-                p = location_dict["polygon"]
-                d = common_date 
+                # Get the master index for this tracer using the map
+                master_index = polygon_master_map.get((b, p))
+                assert master_index is not None, f"Could not find master index for {(b, p)}"
+                antitracer_master_indices.append(master_index)
 
-                assert b in basins, f"Configured basin '{b}' not in known basins."
-                assert p < npolygon.get(b, 0), f"Configured polygon '{p}' invalid for basin '{b}'."
-                assert d in start_dates, f"Configured start_date '{d}' not in known start_dates."
+                # Collect the corresponding forcing file
+                file_path = generic_cdr_files_template(b, p, d)
+                assert os.path.exists(file_path), f"Forcing file not found: {file_path}"
+                collected_cdr_files.append(file_path)
 
-                base_file_path = generic_cdr_files_template(b, p, d)
-                assert os.path.exists(base_file_path), f"Antitracer base forcing file not found: {base_file_path}"
-
-                collected_cdr_files.append(base_file_path)
-
-            # The case name reflects the overall aggregated run, not individual loc_id
-            simname = f"{self.simulation_name}_{common_date}_{global_suffix}"
+            # Define the single case name for the group
+            simname = f"{self.simulation_name}_{group_config['date']}_{group_config['suffix']}"
             case = f"{self.blueprint}.{project_sname}.{simname}.{self.vintage}"
-
+ 
             try:
-                index = start_dates.index(common_date)
+                index = start_dates.index(group_config["date"])
                 ref_date = ref_dates[index]
             except ValueError:
-                raise ValueError(f"'{start_date}' is not a valid start date.")
+                raise ValueError(f"'{group_config['date']}' is not a valid start date.")
 
-            # Add this SINGLE row to the DataFrame
+            # Append the single row for this entire run, now including the list of indices
             rows.append(
                 dict(
                     blueprint=self.blueprint,
-                    polygon=None, # Polygon is not meaningful for an aggregated run
-                    basin=None,   # Basin is not meaningful for an aggregated run
-                    start_date=common_date,
+                    polygon=None,
+                    basin=None,
+                    start_date=group_config["date"],
                     cdr_forcing=self.cdr_forcing,
-                    cdr_forcing_files=collected_cdr_files, # The collected list of all files
+                    cdr_forcing_files=collected_cdr_files,
+                    antitracer_master_indices=antitracer_master_indices,
                     case=case,
                     simulation_key=simname,
                     refdate=ref_date,
@@ -451,7 +459,7 @@ class global_irf_map(object):
                 n = npolygon[b]
 
                 for p in range(0, n):
-                    polygon_master_index += 1
+                    polygon_master_index = polygon_master_map[(b,p)]
 
                     # skip non-coastal polygons if ERW
                     if self.cdr_forcing == "ERW":
@@ -540,19 +548,26 @@ class global_irf_map(object):
                         built = df_case_status.loc[case].build
 
             if not built:
-                build_script = submit_build(
-                    blueprint=caseinfo["blueprint"],
-                    case=case,
-                    cdr_forcing=caseinfo["cdr_forcing"],
-                    cdr_forcing_files=caseinfo["cdr_forcing_files"],
-                    refdate=caseinfo["refdate"],
-                    stop_n=caseinfo["stop_n"],
-                    wallclock=caseinfo["wallclock"],
-                    curtail_output=caseinfo["curtail_output"],
-                    queue=queue,
-                    clobber=clobber,
-                    run_local=run_local,
-                )
+                build_kwargs = {
+                    "blueprint": caseinfo["blueprint"],
+                    "case": case,
+                    "cdr_forcing": caseinfo["cdr_forcing"],
+                    "cdr_forcing_files": caseinfo["cdr_forcing_files"],
+                    "refdate": caseinfo["refdate"],
+                    "stop_n": caseinfo["stop_n"],
+                    "wallclock": caseinfo["wallclock"],
+                    "curtail_output": caseinfo["curtail_output"],
+                    "queue": queue,
+                    "clobber": clobber,
+                    "run_local": run_local,
+                }
+
+                # If it's an ANTITRACER run, add the master indices to the arguments
+                if caseinfo["cdr_forcing"] == "ANTITRACER":
+                    build_kwargs["antitracer_master_indices"] = caseinfo["antitracer_master_indices"]
+
+                # Call submit_build using the complete dictionary of arguments
+                submit_build(**build_kwargs)
 
     def compute(self, n_bundle=0, bundle_queue="regular", just_these_cases=[]):
         """perform the computation"""
