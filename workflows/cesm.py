@@ -305,14 +305,18 @@ def create_smyle_clone(
 
         for i, (fpath, master_idx) in enumerate(zip(cdr_forcing_files, antitracer_master_indices)):
             idx = i + 1 # Fortran 1-based index
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%name = 'ANTITRACER{master_idx}'")
+            
+            padded_master_idx = f"{master_idx:03d}"
+            
+            # Use the padded index in the namelist entry
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%name = 'ANTITRACER{padded_master_idx}'")
             antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%file = '{fpath}'")
             antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%varname = 'alk_forcing'")
             antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_first = 1999")
             antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_last = 2019")
             antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_align = 347")
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%scale_factor = 1.0e4")
-    
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%scale_factor = 1.0e5")
+
         pop_nl_content = textwrap.dedent(
             f"""\
             &passive_tracers_on_nml
