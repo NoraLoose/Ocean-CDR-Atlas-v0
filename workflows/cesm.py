@@ -241,15 +241,6 @@ def create_smyle_clone(
         with open(file_out, "w") as fid:
             fid.write(file_str)
 
-    if cdr_forcing == "ANTITRACER":
-        user_nl_pop_path = f"{caseroot}/user_nl_pop"
-        with open(user_nl_pop_path, "a") as f: # Note: "a" opens the file in append mode
-            print(f"Appending settings to {user_nl_pop_path}")
-            f.write("\n! Appended by setup script to override BGC defaults\n")
-            f.write("&sw_absorption_nml\n")
-            f.write("  chl_option = 'file'\n")
-            f.write("/\n")
-
     # user_datm files
     user_datm_files = glob(f"{scriptroot}/input/cesm2.2.0/cases/{refcase}/user_datm.*")
     for file in user_datm_files:
@@ -294,50 +285,6 @@ def create_smyle_clone(
         atm_alt_co2_opt = "drv_diag"
         _cdr_forcing_file = cdr_forcing_files[0] if cdr_forcing_files else "dummy-file-path"
 
-    elif cdr_forcing == "ANTITRACER":
-        antitracer_on = ".true."
-
-        # Generate antitracer-specific namelist entries for user_nl_pop
-        antitracer_nl_entries = []
-        antitracer_nl_entries.append(f"  init_antitracer_option = 'zero'")
-        antitracer_nl_entries.append(f"  init_antitracer_init_file = 'unknown'")
-        antitracer_nl_entries.append(f"  init_antitracer_init_file_fmt = 'bin'")
-
-        for i, (fpath, master_idx) in enumerate(zip(cdr_forcing_files, antitracer_master_indices)):
-            idx = i + 1 # Fortran 1-based index
-            
-            padded_master_idx = f"{master_idx:03d}"
-            
-            # Use the padded index in the namelist entry
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%name = 'ANTITRACER{padded_master_idx}'")
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%file = '{fpath}'")
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%varname = 'alk_forcing'")
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_first = 1999")
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_last = 2019")
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_align = 347")
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%scale_factor = 1.0e5")
-
-        pop_nl_content = textwrap.dedent(
-            f"""\
-            &passive_tracers_on_nml
-              antitracer_on = .true.
-            /
-            &antitracer_nml
-            {''.join(antitracer_nl_entries)}
-            /
-            """
-        )
-
-        user_nl["pop"] = pop_nl_content
-
-        # Write the antitracer_indices.txt file
-        indices_filepath = f"{caseroot}/antitracer_indices.txt"
-
-        # This print statement will appear in your build log
-        print(f"INFO: Writing antitracer indices to {indices_filepath}")
-
-        with open(indices_filepath, "w") as f:
-            f.write(" ".join(map(str, antitracer_master_indices)))
 
     if cdr_forcing != "ANTITRACER":
         user_nl["marbl"] = textwrap.dedent(
@@ -362,6 +309,9 @@ def create_smyle_clone(
             """
         )
 
+    else:
+        user_nl["pop"] = ""
+
     if curtail_output:
         user_nl["pop"] += textwrap.dedent(
             f"""\
@@ -374,6 +324,63 @@ def create_smyle_clone(
         ldiag_global_tracer_budgets = .false.
         """
         )
+
+    if cdr_forcing == "ANTITRACER":
+        antitracer_on = ".true."
+
+        # Generate antitracer-specific namelist entries for user_nl_pop
+        antitracer_nl_entries = []
+        antitracer_nl_entries.append(f"  init_antitracer_option = 'zero'")
+        antitracer_nl_entries.append(f"  init_antitracer_init_file = 'unknown'")
+        antitracer_nl_entries.append(f"  init_antitracer_init_file_fmt = 'bin'")
+
+        for i, (fpath, master_idx) in enumerate(zip(cdr_forcing_files, antitracer_master_indices)):
+            idx = i + 1 # Fortran 1-based index
+            
+            padded_master_idx = f"{master_idx:03d}"
+            
+            # Use the padded index in the namelist entry
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%name = 'ANTITRACER{padded_master_idx}'")
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%file = '{fpath}'")
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%varname = 'alk_forcing'")
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_first = 1999")
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_last = 2019")
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_align = 347")
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%scale_factor = 1.0e5")
+
+
+        antitracer_nl_str = "\n".join(antitracer_nl_entries)
+
+        beta_nl_str = textwrap.dedent(f"""
+          beta_forcing_nml%file = '/global/cfs/projectdirs/m4746/Projects/OAE-Efficiency-Map/data/beta/carbonate_sensitivity.nc'
+          beta_forcing_nml%varname = 'dDICdCO2'
+          beta_forcing_nml%year_first = 1998
+          beta_forcing_nml%year_last = 2020
+          beta_forcing_nml%year_align = 347
+        """)
+
+        pop_nl_content = textwrap.dedent(f"""\
+        &sw_absorption_nml
+          chl_option = 'file'
+        /
+        &passive_tracers_on_nml
+          antitracer_on = .true.
+        /
+        &antitracer_nml
+        {antitracer_nl_str}
+        {beta_nl_str}
+        /""")
+
+        user_nl["pop"] = user_nl["pop"] + "\n" + pop_nl_content.strip()
+
+        # Write the antitracer_indices.txt file
+        indices_filepath = f"{caseroot}/antitracer_indices.txt"
+
+        # This print statement will appear in your build log
+        print(f"INFO: Writing antitracer indices to {indices_filepath}")
+
+        with open(indices_filepath, "w") as f:
+            f.write(" ".join(map(str, antitracer_master_indices)))
 
     for key, nl in user_nl.items():
         user_nl_file = f"{caseroot}/user_nl_{key}"
