@@ -356,7 +356,6 @@ class global_irf_map(object):
         start_dates = ["1999-01", "1999-04", "1999-07", "1999-10"]
         ref_dates = ["0347-01-01", "0347-04-01", "0347-07-01", "0347-10-01"]
         cdr_forcing_root_path = "/global/cfs/projectdirs/m4746/Projects/OAE-Efficiency-Map/data/alk-forcing/OAE-Efficiency-Map"
-        cdr_forcing_root_path = "/global/cfs/projectdirs/m4746/Users/nora"
 
         generic_cdr_files_template = lambda b, p, d: f"{cdr_forcing_root_path}/alk-forcing-{b}.{p:03d}-{d}.nc"
 
