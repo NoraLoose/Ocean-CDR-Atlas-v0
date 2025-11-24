@@ -6,6 +6,8 @@ import itertools
 import uuid
 import time
 import warnings
+from pathlib import Path
+import yaml
 
 from tqdm.notebook import tqdm
 
@@ -80,7 +82,7 @@ def submit_bundle(cases, n_bundle=100, nodes_per_case=7, queue="regular"):
         #SBATCH --qos={queue}
         #SBATCH --nodes={n_nodes}
         #SBATCH --ntasks-per-node=128
-        #SBATCH --time=00:30:00
+        #SBATCH --time=48:00:00
         #SBATCH --exclusive
         #SBATCH --constraint=cpu
 
@@ -291,24 +293,29 @@ pm.engines.papermill_engines._engines["md_jinja"] = md_jinja_engine
 
 class global_irf_map(object):
 
-    def __init__(self, cdr_forcing, vintage, antitracer_config=None):
+    def __init__(self, cdr_forcing, vintage, antitracer_config: dict | str | Path = None):
         # simulation details
 
         self.blueprint = "smyle"
         self.simulation_name = f"glb-{cdr_forcing.lower()}"
         self.cdr_forcing = cdr_forcing
         self.vintage = vintage
-        self.antitracer_config = antitracer_config
+
+        # If a path to a YAML is provided, read it
+        if isinstance(antitracer_config, (str, Path)):
+            with open(antitracer_config, "r") as f:
+                self.antitracer_config = yaml.safe_load(f)
+        else:
+            self.antitracer_config = antitracer_config
 
         if self.cdr_forcing == "ANTITRACER":
             if not isinstance(self.antitracer_config, dict) or not self.antitracer_config:
                 raise ValueError("When cdr_forcing is 'ANTITRACER', 'antitracer_config' must be a single, non-empty dictionary.")
 
             # Validate the required top-level keys for the single dictionary config
-            if "suffix" not in self.antitracer_config or \
-               "date" not in self.antitracer_config or \
-               "experiments" not in self.antitracer_config:
-               raise ValueError("The 'antitracer_config' dictionary must contain 'suffix', 'date', and 'experiments' keys.")
+            for key in ["suffix", "date", "experiments"]:
+                if key not in self.antitracer_config:
+                    raise ValueError(f"'antitracer_config' must contain the key '{key}'")
 
             # Validate the 'experiments' list itself
             if not isinstance(self.antitracer_config["experiments"], list) or \
@@ -359,7 +366,7 @@ class global_irf_map(object):
 
         generic_cdr_files_template = lambda b, p, d: f"{cdr_forcing_root_path}/alk-forcing-{b}.{p:03d}-{d}.nc"
 
-        nyear_case = 1
+        nyear_case = 12
         nyear_baseline = 16
         periods = nyear_case * 12
         self.time_cases = {}
