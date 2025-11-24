@@ -24,8 +24,8 @@ cesm_inputdata = paths["cesm_inputdata_ro"]
 def create_smyle_clone(
     case,
     refdate="0347-01-01",
-    #queue="regular",
-    queue="debug",
+    queue="regular",
+    #queue="debug",
     cdr_forcing=None,
     cdr_forcing_files=None,
     antitracer_master_indices=None,
@@ -33,8 +33,8 @@ def create_smyle_clone(
     curtail_output=True,
     stop_n=15,
     stop_option="nyear",
-    #wallclock="10:00:00",
-    wallclock="30:00",
+    wallclock="48:00:00",
+    #wallclock="30:00",
     resubmit=0,
 ):
 
@@ -207,7 +207,7 @@ def create_smyle_clone(
 
     xmlchange(f"STOP_N={stop_n}")
     xmlchange(f"STOP_OPTION={stop_option}")
-    xmlchange(f"REST_N={stop_n}")
+    xmlchange(f"REST_N=1")
     xmlchange(f"REST_OPTION={stop_option}")
     xmlchange(f"RESUBMIT={resubmit}")
     xmlchange(f"JOB_WALLCLOCK_TIME={wallclock}")
