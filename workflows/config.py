@@ -4,8 +4,8 @@ import subprocess
 
 # config.yml
 project_name = "Ocean-CDR-Atlas-v0"
-project_sname = "anti-tracer"
-branch = project_sname
+project_sname = "cdr-atlas-v0"
+branch = "anti-tracer"
 codename = "cesm2.2.0"
 remote = "git@github.com:CWorthy-ocean/cesm2.2.0.git"
 
