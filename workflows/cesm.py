@@ -24,8 +24,8 @@ cesm_inputdata = paths["cesm_inputdata_ro"]
 def create_smyle_clone(
     case,
     refdate="0347-01-01",
-    queue="regular",
-    #queue="debug",
+    #queue="regular",
+    queue="debug",
     cdr_forcing=None,
     cdr_forcing_files=None,
     antitracer_master_indices=None,
@@ -33,8 +33,8 @@ def create_smyle_clone(
     curtail_output=True,
     stop_n=15,
     stop_option="nyear",
-    wallclock="48:00:00",
-    #wallclock="30:00",
+    #wallclock="48:00:00",
+    wallclock="30:00",
     resubmit=0,
 ):
 
@@ -132,6 +132,7 @@ def create_smyle_clone(
         xmlchange("OCN_TRACER_MODULES='antitracer'")
     else:
         xmlchange("OCN_TRACER_MODULES='iage ecosys'")
+        xmlchange("ANTITRACER_TRACER_CNT=0")
 
     xmlchange("DATM_PRESAERO='clim_1850'")
 
@@ -157,7 +158,9 @@ def create_smyle_clone(
     # Add curtail_output files if requested
     if curtail_output:
         all_source_files.extend(glob(f"{scriptroot}/input/cesm2.2.0/SourceMods/curtail-output-gx1v7/src.pop/*"))
-    
+    elif cdr_forcing != "ANTITRACER":
+        all_source_files.extend(glob(f"{scriptroot}/input/cesm2.2.0/SourceMods/gx1v7/src.pop/*"))    
+        
     # Add antitracer specific files
     if cdr_forcing == "ANTITRACER":
         
@@ -304,7 +307,7 @@ def create_smyle_clone(
             alk_forcing_shr_stream_year_first = 1999
             alk_forcing_shr_stream_year_last = 2019
             alk_forcing_shr_stream_year_align = 347
-            alk_forcing_shr_stream_file = '{cdr_forcing_file}'
+            alk_forcing_shr_stream_file = '{_cdr_forcing_file}'
             alk_forcing_shr_stream_scale_factor = 1.0e5 ! convert from mol/m^2/s to nmol/cm^2/s
             """
         )

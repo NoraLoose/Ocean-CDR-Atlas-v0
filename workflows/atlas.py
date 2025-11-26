@@ -402,7 +402,7 @@ class global_irf_map(object):
                     simulation_key="baseline",
                     refdate=ref_dates[0],
                     stop_n=nyear_baseline,
-                    wallclock="12:00:00",
+                    wallclock="00:30:00",
                     curtail_output=False,
                 )
             )
@@ -473,8 +473,7 @@ class global_irf_map(object):
                             continue
                             
                     for i, d in enumerate(start_dates):
-
-                        file = f"{cdr_forcing_path}/alk-forcing-{b}.{p:03d}-{d}.nc"
+                        file = generic_cdr_files_template(b, p, d)
                         assert os.path.exists(file), file
 
                         loc = f"{b}_{p:03d}_{d}-01"
