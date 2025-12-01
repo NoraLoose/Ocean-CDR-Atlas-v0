@@ -2,7 +2,7 @@ import os
 import shutil
 from glob import glob
 from subprocess import check_call
-
+from pathlib import Path
 from datetime import datetime
 
 import textwrap
@@ -28,6 +28,7 @@ def create_smyle_clone(
     queue="debug",
     cdr_forcing=None,
     cdr_forcing_files=None,
+    beta_file=None,
     antitracer_master_indices=None,
     clobber=False,
     curtail_output=True,
@@ -52,8 +53,24 @@ def create_smyle_clone(
         assert isinstance(cdr_forcing_files, list), "For 'ANTITRACER' forcing, 'cdr_forcing_files' must be a list of file paths."
         assert len(cdr_forcing_files) > 0, "For 'ANTITRACER' forcing, 'cdr_forcing_files' list cannot be empty."
         assert isinstance(antitracer_master_indices, list), "For 'ANTITRACER' forcing, 'antitracer_master_indices' must be a list."
-        assert len(cdr_forcing_files) == len(antitracer_master_indices), "Mismatch between number of forcing files and master indices."
+        if beta_file is None:
+            raise ValueError(
+                "For 'ANTITRACER' forcing, 'beta_file' must be provided "
+                "and cannot be None."
+            )
 
+        if not isinstance(beta_file, (str, Path)):
+            raise TypeError(
+                f"'beta_file' must be a string or Path, got {type(beta_file)}"
+            )
+
+        # Normalize to Path before checking
+        beta_file = Path(beta_file)
+
+        if not beta_file.exists():
+            raise FileNotFoundError(
+                f"'beta_file' does not exist: {beta_file}"
+            )
 
     rundir = f"{paths['scratch']}/{case}/run"
     blddir = f"{paths['scratch']}/{case}/bld"
@@ -327,7 +344,17 @@ def create_smyle_clone(
         ldiag_global_tracer_budgets = .false.
         """
         )
-
+    else:
+        if cdr_forcing != "ANTITRACER":
+            user_nl["pop"] += textwrap.dedent(
+                    f"""\
+                    &tavg_nml
+                      n_tavg_streams = 3
+                    /
+                    """
+                )
+                
+        
     if cdr_forcing == "ANTITRACER":
         antitracer_on = ".true."
 
@@ -353,9 +380,9 @@ def create_smyle_clone(
 
 
         antitracer_nl_str = "\n".join(antitracer_nl_entries)
-
+        
         beta_nl_str = textwrap.dedent(f"""
-          beta_forcing_nml%file = '/global/cfs/projectdirs/m4746/Projects/OAE-Efficiency-Map/data/beta/carbonate_sensitivity.nc'
+          beta_forcing_nml%file = '{str(beta_file)}'
           beta_forcing_nml%varname = 'dDICdCO2'
           beta_forcing_nml%year_first = 1998
           beta_forcing_nml%year_last = 2020
