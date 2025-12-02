@@ -290,62 +290,174 @@ class md_jinja_engine(NBClientEngine):
 # what's the right way to register an engine?
 pm.engines.papermill_engines._engines["md_jinja"] = md_jinja_engine
 
+class global_irf_map:
+    """
+    Build and manage IRF (Impulse Response Function) simulation metadata
+    for global-scale CDR experiments (OAE, ERW, DOR, ANTITRACER).
 
-class global_irf_map(object):
+    Parameters
+    ----------
+    cdr_forcing : str
+        Type of CDR forcing: "OAE", "ERW", "DOR", "ANTITRACER", etc.
+    vintage : str
+        CESM/SMYLE experiment vintage tag.
+    antitracer_config : dict | str | Path, optional
+        ANTITRACER configuration. Must contain the keys:
+        - 'suffix' : str
+        - 'date'   : str
+        - 'experiments' : list[{"basin": str, "polygon": int}]
+        - 'beta_file' : str or Path (path to β-forcing file)
+    antitracer_forcing_files : list[str] | None
+        Pre-generated list of ANTITRACER forcing file paths.
+        If provided, these files will be used instead of building the list
+        automatically from `antitracer_config`.
+    """
 
-    def __init__(self, cdr_forcing, vintage, antitracer_config: dict | str | Path = None):
-        # simulation details
+    def __init__(
+        self,
+        cdr_forcing: str,
+        vintage: str,
+        antitracer_config: dict | str | Path | None = None,
+        antitracer_forcing_files: list[str] | None = None,
+    ) -> None:
 
+        # -------------------------
+        # Basic metadata
+        # -------------------------
         self.blueprint = "smyle"
         self.simulation_name = f"glb-{cdr_forcing.lower()}"
-        self.cdr_forcing = cdr_forcing
+        self.cdr_forcing = cdr_forcing.upper()
         self.vintage = vintage
 
-        # If a path to a YAML is provided, read it
+        # -------------------------
+        # Handle ANTITRACER config
+        # -------------------------
         if isinstance(antitracer_config, (str, Path)):
+            # YAML → dict
             with open(antitracer_config, "r") as f:
-                self.antitracer_config = yaml.safe_load(f)
+                self.antitracer_config: dict | None = yaml.safe_load(f)
         else:
             self.antitracer_config = antitracer_config
 
         if self.cdr_forcing == "ANTITRACER":
-            if not isinstance(self.antitracer_config, dict) or not self.antitracer_config:
-                raise ValueError("When cdr_forcing is 'ANTITRACER', 'antitracer_config' must be a single, non-empty dictionary.")
-
-            # Validate the required top-level keys for the single dictionary config
-            for key in ["suffix", "date", "experiments"]:
-                if key not in self.antitracer_config:
-                    raise ValueError(f"'antitracer_config' must contain the key '{key}'")
-
-            # Validate the 'experiments' list itself
-            if not isinstance(self.antitracer_config["experiments"], list) or \
-               not self.antitracer_config["experiments"]:
-               raise ValueError("The 'experiments' value in 'antitracer_config' must be a non-empty list of experiment dictionaries.")
-
-            # Validate each experiment dictionary within the 'experiments' list
-            for exp_dict in self.antitracer_config["experiments"]:
-                if not isinstance(exp_dict, dict) or \
-                   "basin" not in exp_dict or \
-                   "polygon" not in exp_dict:
-                   raise ValueError("Each experiment in 'antitracer_config.experiments' must be a dict with 'basin' and 'polygon' keys.")
-
-        # reference case details
+            self._validate_antitracer_config()
+            self._validate_antitracer_forcing_files(antitracer_forcing_files)
+            self.antitracer_forcing_files = antitracer_forcing_files
+        # -------------------------
+        # Reference information
+        # -------------------------
         self.reference_case = "g.e22.GOMIPECOIAF_JRA-1p4-2018.TL319_g17.SMYLE.005"
+
         self.time_reference = xr.cftime_range(
             "0306-01-01", "0368-12-31", freq="ME", calendar="noleap"
         )
+
         self._df_case_status = None
         self.df_validation = None
         self.df_analysis = None
+
+        # Build case table
         self.set_experiments()
 
-    def set_experiments(self):
+    # -------------------------------------------------------------------------
+    # VALIDATION HELPERS
+    # -------------------------------------------------------------------------
+
+    def _validate_antitracer_config(self) -> None:
+        """
+        Validate ANTITRACER configuration dictionary.
+        Ensures presence of required keys and validity of 'beta_file'.
+        """
+
+        if not isinstance(self.antitracer_config, dict) or not self.antitracer_config:
+            raise ValueError(
+                "When cdr_forcing='ANTITRACER', 'antitracer_config' must be a "
+                "non-empty dictionary."
+            )
+
+        required_keys = ["suffix", "date", "experiments", "beta_file"]
+        for key in required_keys:
+            if key not in self.antitracer_config:
+                raise ValueError(
+                    f"ANTITRACER config missing required key '{key}'. "
+                    f"Required keys: {required_keys}"
+                )
+
+        # Validate experiments
+        experiments = self.antitracer_config["experiments"]
+        if not isinstance(experiments, list) or not experiments:
+            raise ValueError("'experiments' must be a non-empty list.")
+
+        for exp in experiments:
+            if not isinstance(exp, dict):
+                raise TypeError("Each experiment must be a dictionary.")
+            if "basin" not in exp or "polygon" not in exp:
+                raise ValueError(
+                    "Each experiment dict must contain 'basin' and 'polygon'."
+                )
+        
+        # Validate beta_file
+        beta_file = self.antitracer_config["beta_file"]
+        if not isinstance(beta_file, (str, Path)):
+            raise TypeError("'beta_file' must be a string or Path.")
+        beta_file = Path(beta_file)
+
+        if not beta_file.exists():
+            raise FileNotFoundError(
+                f"beta_file does not exist: {beta_file}"
+            )
+        
+    def _validate_antitracer_forcing_files(self, forcing_files: list[str] | None) -> None:
+        """
+        Validate the user-provided ANTITRACER forcing file list.
+
+        If provided:
+            - must be list[str]
+            - must be readable paths
+
+        If None:
+            forcing files will be constructed inside set_experiments().
+        """
+        if forcing_files is None:
+            return
+
+        if not isinstance(forcing_files, list):
+            raise TypeError(
+                "'antitracer_forcing_files' must be a list of file paths, or None."
+            )
+
+        for f in forcing_files:
+            if not isinstance(f, str):
+                raise TypeError(
+                    "'antitracer_forcing_files' entries must be strings representing file paths."
+                )
+            if not os.path.exists(f):
+                raise FileNotFoundError(f"ANTITRACER forcing file not found: {f}")
+
+    # -------------------------------------------------------------------------
+    # MAIN TABLE BUILDER
+    # -------------------------------------------------------------------------
+
+    def set_experiments(self) -> None:
+        """
+        Build the master experiment table (`self.df`) describing all CDR simulations.
+
+        Handles:
+        - Non-ANTITRACER case: OAE, ERW, DOR
+        - ANTITRACER grouped multi-polygon tracer release
+        - Baseline reference case
+        """
+
+        # -------------------------
+        # Static configuration
+        # -------------------------
         basins = [
             "North_Atlantic_basin",
             "North_Pacific_basin",
             "South",
             "Southern_Ocean",
         ]
+
         npolygon = dict(
             North_Atlantic_basin=150,
             North_Pacific_basin=200,
@@ -362,28 +474,36 @@ class global_irf_map(object):
 
         start_dates = ["1999-01", "1999-04", "1999-07", "1999-10"]
         ref_dates = ["0347-01-01", "0347-04-01", "0347-07-01", "0347-10-01"]
-        cdr_forcing_root_path = "/global/cfs/projectdirs/m4746/Projects/OAE-Efficiency-Map/data/alk-forcing/OAE-Efficiency-Map"
 
-        generic_cdr_files_template = lambda b, p, d: f"{cdr_forcing_root_path}/alk-forcing-{b}.{p:03d}-{d}.nc"
-
-        nyear_case = 12
-        nyear_baseline = 16
-        periods = nyear_case * 12
-        self.time_cases = {}
-        for k in ref_dates:
-            self.time_cases[k] = xr.cftime_range(
-                k, periods=periods, freq="ME", calendar="noleap"
-            )
-
-        periods = nyear_baseline * 12
-        self.time_baseline = xr.cftime_range(
-            ref_dates[0], periods=periods, freq="ME", calendar="noleap"
+        cdr_forcing_root = (
+            "/global/cfs/projectdirs/m4746/Projects/OAE-Efficiency-Map/data/"
+            "alk-forcing/OAE-Efficiency-Map"
         )
 
-        # Initialize the list of rows for the DataFrame
-        rows = []
+        def generic_file(b, p, d):
+            return f"{cdr_forcing_root}/alk-forcing-{b}.{p:03d}-{d}.nc"
 
-        # Pre-calculate the master index map for all possible locations
+        # -------------------------
+        # Time axes
+        # -------------------------
+        nyear_case = 1
+        nyear_baseline = 16
+
+        periods_case = nyear_case * 12
+        periods_baseline = nyear_baseline * 12
+
+        self.time_cases = {
+            k: xr.cftime_range(k, periods=periods_case, freq="ME", calendar="noleap")
+            for k in ref_dates
+        }
+
+        self.time_baseline = xr.cftime_range(
+            ref_dates[0], periods=periods_baseline, freq="ME", calendar="noleap"
+        )
+
+        # -------------------------
+        # Build polygon master index
+        # -------------------------
         polygon_master_map = {}
         idx = -1
         for b in basins:
@@ -391,13 +511,25 @@ class global_irf_map(object):
                 idx += 1
                 polygon_master_map[(b, p)] = idx
 
+        # -------------------------
+        # Begin table rows
+        # -------------------------
+        rows = []
+
+        # ---------------------------------------------------------------------
+        # BASELINE CASE
+        # ---------------------------------------------------------------------
         if self.cdr_forcing != "ANTITRACER":
             rows.append(
                 dict(
                     blueprint=self.blueprint,
-                    polygon=None, polygon_master=None, basin=None,
+                    polygon=None,
+                    polygon_master=None,
+                    basin=None,
                     start_date=start_dates[0],
-                    cdr_forcing=None, cdr_forcing_files=None,
+                    cdr_forcing=None,
+                    cdr_forcing_files=None,
+                    beta_file=None,
                     case=f"{self.blueprint}.{project_sname}.control.{self.vintage}",
                     simulation_key="baseline",
                     refdate=ref_dates[0],
@@ -407,74 +539,84 @@ class global_irf_map(object):
                 )
             )
 
+        # ---------------------------------------------------------------------
+        # ANTITRACER GROUPED RELEASE
+        # ---------------------------------------------------------------------
         if self.cdr_forcing == "ANTITRACER":
-            group_config = self.antitracer_config
 
-            antitracer_master_indices = []
-            collected_cdr_files = []
+            cfg = self.antitracer_config
 
-            # Loop through configured experiments to gather info for each tracer
-            for exp_dict in group_config["experiments"]:
-                b = exp_dict["basin"]
-                p = exp_dict["polygon"]
-                d = group_config["date"]
+            if self.antitracer_forcing_files is not None:
+                forcing_files = list(self.antitracer_forcing_files)
+            else:
+                forcing_files = []
 
-                # Get the master index for this tracer using the map
-                master_index = polygon_master_map.get((b, p))
-                assert master_index is not None, f"Could not find master index for {(b, p)}"
-                antitracer_master_indices.append(master_index)
+            master_indices = []
 
-                # Collect the corresponding forcing file
-                file_path = generic_cdr_files_template(b, p, d)
-                assert os.path.exists(file_path), f"Forcing file not found: {file_path}"
-                collected_cdr_files.append(file_path)
+            for exp in cfg["experiments"]:
+                b = exp["basin"]
+                p = exp["polygon"]
+                d = cfg["date"]
 
-            # Define the single case name for the group
-            simname = f"{self.simulation_name}_{group_config['date']}_{group_config['suffix']}"
+                midx = polygon_master_map.get((b, p))
+                if midx is None:
+                    raise ValueError(f"No master index for basin={b}, polygon={p}")
+                master_indices.append(midx)
+
+                # Build file only if user did not provide their own
+                if forcing_files is not None and len(forcing_files) == 0:
+                    fpath = generic_file(b, p, d)
+                    if not os.path.exists(fpath):
+                        raise FileNotFoundError(f"Forcing file not found: {fpath}")
+                    forcing_files.append(fpath)
+
+            # Simulation name
+            simname = f"{self.simulation_name}_{cfg['date']}_{cfg['suffix']}"
             case = f"{self.blueprint}.{project_sname}.{simname}.{self.vintage}"
- 
-            try:
-                index = start_dates.index(group_config["date"])
-                ref_date = ref_dates[index]
-            except ValueError:
-                raise ValueError(f"'{group_config['date']}' is not a valid start date.")
 
-            # Append the single row for this entire run, now including the list of indices
+            try:
+                i = start_dates.index(cfg["date"])
+                refdate = ref_dates[i]
+            except ValueError:
+                raise ValueError(f"Invalid ANTITRACER start_date {cfg['date']}")
+
             rows.append(
                 dict(
                     blueprint=self.blueprint,
                     polygon=None,
                     basin=None,
-                    start_date=group_config["date"],
+                    start_date=cfg["date"],
                     cdr_forcing=self.cdr_forcing,
-                    cdr_forcing_files=collected_cdr_files,
-                    antitracer_master_indices=antitracer_master_indices,
+                    cdr_forcing_files=forcing_files,
+                    beta_file=cfg["beta_file"],
+                    antitracer_master_indices=master_indices,
                     case=case,
                     simulation_key=simname,
-                    refdate=ref_date,
+                    refdate=refdate,
                     stop_n=nyear_case,
                     wallclock="10:00:00",
                     curtail_output=True,
                 )
             )
 
-        else: # self.cdr_forcing is not "ANTITRACER" (OAE, DOR, ERW, or None)
+        # ---------------------------------------------------------------------
+        # REGULAR SINGLE-POLYGON FORCING (OAE/ERW/DOR)
+        # ---------------------------------------------------------------------
+        else:
             index = 0
-            polygon_master_index = -1
             for b in basins:
-                n = npolygon[b]
+                for p in range(npolygon[b]):
 
-                for p in range(0, n):
-                    polygon_master_index = polygon_master_map[(b,p)]
+                    # ERW excludes non-coastal polygons
+                    if self.cdr_forcing == "ERW" and p not in coastal_polygons[b]:
+                        continue
 
-                    # skip non-coastal polygons if ERW
-                    if self.cdr_forcing == "ERW":
-                        if p not in coastal_polygons[b]:
-                            continue
-                            
+                    master_index = polygon_master_map[(b, p)]
+
                     for i, d in enumerate(start_dates):
-                        file = generic_cdr_files_template(b, p, d)
-                        assert os.path.exists(file), file
+                        fpath = generic_file(b, p, d)
+                        if not os.path.exists(fpath):
+                            raise FileNotFoundError(fpath)
 
                         loc = f"{b}_{p:03d}_{d}-01"
                         simname = f"{self.simulation_name}_{loc}_{index:05d}"
@@ -484,11 +626,12 @@ class global_irf_map(object):
                             dict(
                                 blueprint=self.blueprint,
                                 polygon=p,
-                                polygon_master=polygon_master_index,
+                                polygon_master=master_index,
                                 basin=b,
                                 start_date=d,
                                 cdr_forcing=self.cdr_forcing,
-                                cdr_forcing_files=[file],
+                                cdr_forcing_files=[fpath],
+                                beta_file=None,
                                 case=case,
                                 simulation_key=simname,
                                 refdate=ref_dates[i],
@@ -499,9 +642,11 @@ class global_irf_map(object):
                         )
                         index += 1
 
-        # Assign the built list of rows to the DataFrame
+        # -------------------------
+        # Finalize DataFrame
+        # -------------------------
         self.df = pd.DataFrame(rows).set_index("case")
-        self.cases = self.df.index.to_list()
+        self.cases = list(self.df.index)
 
     def build(
         self,
@@ -570,6 +715,7 @@ class global_irf_map(object):
                 # If it's an ANTITRACER run, add the master indices to the arguments
                 if caseinfo["cdr_forcing"] == "ANTITRACER":
                     build_kwargs["antitracer_master_indices"] = caseinfo["antitracer_master_indices"]
+                    build_kwargs["beta_file"] = caseinfo["beta_file"]
 
                 # Call submit_build using the complete dictionary of arguments
                 submit_build(**build_kwargs)

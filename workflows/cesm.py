@@ -43,34 +43,73 @@ def create_smyle_clone(
     assert (
         not os.path.exists(caseroot) or clobber
     ), f"Case {case} exists; caseroot:\n{caseroot}\n"
-
+    
     allowed_cdr_forcings = ["OAE", "DOR", "ERW", "ANTITRACER"]
     if cdr_forcing is not None:
         assert cdr_forcing in allowed_cdr_forcings, f"Unknown CDR forcing: {cdr_forcing}"
-
-    # Validate cdr_forcing_files if ANTITRACER is chosen
+    
+    # ----------------------------------------------------------------------
+    # Validate ANTITRACER requirements early (before building the case)
+    # ----------------------------------------------------------------------
     if cdr_forcing == "ANTITRACER":
-        assert isinstance(cdr_forcing_files, list), "For 'ANTITRACER' forcing, 'cdr_forcing_files' must be a list of file paths."
-        assert len(cdr_forcing_files) > 0, "For 'ANTITRACER' forcing, 'cdr_forcing_files' list cannot be empty."
-        assert isinstance(antitracer_master_indices, list), "For 'ANTITRACER' forcing, 'antitracer_master_indices' must be a list."
-        if beta_file is None:
+    
+        # -- cdr_forcing_files must be a non-empty list
+        if not isinstance(cdr_forcing_files, list):
+            raise TypeError(
+                "For 'ANTITRACER', 'cdr_forcing_files' must be a list of file paths."
+            )
+        if len(cdr_forcing_files) == 0:
             raise ValueError(
-                "For 'ANTITRACER' forcing, 'beta_file' must be provided "
-                "and cannot be None."
+                "For 'ANTITRACER', 'cdr_forcing_files' list cannot be empty."
+            )
+    
+        # -- master indices must be provided
+        if not isinstance(antitracer_master_indices, list):
+            raise TypeError(
+                "For 'ANTITRACER', 'antitracer_master_indices' must be a list."
             )
 
+        # Number of tracers defined by the configuration
+        n_tracers = len(antitracer_master_indices)
+        forcing_files = cdr_forcing_files
+    
+        # --- Validate forcing file count -----------------------------------
+        if len(forcing_files) == 1:
+            # Replicate the single file for all tracers
+            antitracer_forcing_files = forcing_files * n_tracers
+    
+        elif len(forcing_files) == n_tracers:
+            # One file per tracer
+            antitracer_forcing_files = forcing_files
+    
+        else:
+            # Mismatch between file count and tracers
+            raise ValueError(
+                "Invalid ANTITRACER forcing configuration:\n"
+                f"- Provided forcing files: {len(forcing_files)}\n"
+                f"- Number of tracers:     {n_tracers}\n\n"
+                "Expected either:\n"
+                "  1. A single file (will be replicated for all tracers), OR\n"
+                "  2. One file per tracer.\n"
+            )
+
+        # -- validate beta file
+        if beta_file is None:
+            raise ValueError(
+                "For 'ANTITRACER', 'beta_file' must be provided and cannot be None."
+            )
+    
         if not isinstance(beta_file, (str, Path)):
             raise TypeError(
                 f"'beta_file' must be a string or Path, got {type(beta_file)}"
             )
-
-        # Normalize to Path before checking
-        beta_file = Path(beta_file)
-
-        if not beta_file.exists():
+    
+        beta_path = Path(beta_file)
+        if not beta_path.exists():
             raise FileNotFoundError(
-                f"'beta_file' does not exist: {beta_file}"
+                f"'beta_file' does not exist: {beta_path}"
             )
+
 
     rundir = f"{paths['scratch']}/{case}/run"
     blddir = f"{paths['scratch']}/{case}/bld"
@@ -145,7 +184,7 @@ def create_smyle_clone(
     xmlchange("CICE_DECOMPSETTING='square-ice'")
 
     if cdr_forcing == "ANTITRACER":
-        xmlchange(f"ANTITRACER_TRACER_CNT={len(cdr_forcing_files)}")
+        xmlchange(f"ANTITRACER_TRACER_CNT={len(antitracer_forcing_files)}")
         xmlchange("OCN_TRACER_MODULES='antitracer'")
     else:
         xmlchange("OCN_TRACER_MODULES='iage ecosys'")
@@ -363,6 +402,26 @@ def create_smyle_clone(
         antitracer_nl_entries.append(f"  init_antitracer_option = 'zero'")
         antitracer_nl_entries.append(f"  init_antitracer_init_file = 'unknown'")
         antitracer_nl_entries.append(f"  init_antitracer_init_file_fmt = 'bin'")
+
+        # --- Generate namelist entries ---
+        for i, (fpath, master_idx) in enumerate(zip(antitracer_forcing_files, antitracer_master_indices)):
+            idx = i + 1
+            padded_master_idx = f"{master_idx:03d}"
+        
+            antitracer_nl_entries.append(
+                f"  antitracer_forcing_nml_array({idx})%name = 'ANTITRACER{padded_master_idx}'"
+            )
+            antitracer_nl_entries.append(
+                f"  antitracer_forcing_nml_array({idx})%file = '{fpath}'"
+            )
+            antitracer_nl_entries.append(
+                f"  antitracer_forcing_nml_array({idx})%varname = 'alk_forcing'"
+            )
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_first = 1999")
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_last  = 2019")
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_align = 347")
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%scale_factor = 1.0e5")
+
 
         for i, (fpath, master_idx) in enumerate(zip(cdr_forcing_files, antitracer_master_indices)):
             idx = i + 1 # Fortran 1-based index
