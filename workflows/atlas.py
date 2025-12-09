@@ -305,12 +305,8 @@ class global_irf_map:
         ANTITRACER configuration. Must contain the keys:
         - 'suffix' : str
         - 'date'   : str
-        - 'experiments' : list[{"basin": str, "polygon": int}]
+        - 'experiments' : list[{"basin": str, "polygon": int, "forcing_file": str | Path}, "varname": str]
         - 'beta_file' : str or Path (path to β-forcing file)
-    antitracer_forcing_files : list[str] | None
-        Pre-generated list of ANTITRACER forcing file paths.
-        If provided, these files will be used instead of building the list
-        automatically from `antitracer_config`.
     """
 
     def __init__(
@@ -318,7 +314,6 @@ class global_irf_map:
         cdr_forcing: str,
         vintage: str,
         antitracer_config: dict | str | Path | None = None,
-        antitracer_forcing_files: list[str] | None = None,
     ) -> None:
 
         # -------------------------
@@ -341,8 +336,6 @@ class global_irf_map:
 
         if self.cdr_forcing == "ANTITRACER":
             self._validate_antitracer_config()
-            self._validate_antitracer_forcing_files(antitracer_forcing_files)
-            self.antitracer_forcing_files = antitracer_forcing_files
         # -------------------------
         # Reference information
         # -------------------------
@@ -391,10 +384,12 @@ class global_irf_map:
         for exp in experiments:
             if not isinstance(exp, dict):
                 raise TypeError("Each experiment must be a dictionary.")
-            if "basin" not in exp or "polygon" not in exp:
-                raise ValueError(
-                    "Each experiment dict must contain 'basin' and 'polygon'."
-                )
+            required = ["basin", "polygon", "forcing_file", "varname"]
+            for k in required:
+                if k not in exp:
+                    raise ValueError(
+                        f"Each experiment must contain {required}, missing '{k}'."
+                    )
         
         # Validate beta_file
         beta_file = self.antitracer_config["beta_file"]
@@ -407,33 +402,6 @@ class global_irf_map:
                 f"beta_file does not exist: {beta_file}"
             )
         
-    def _validate_antitracer_forcing_files(self, forcing_files: list[str] | None) -> None:
-        """
-        Validate the user-provided ANTITRACER forcing file list.
-
-        If provided:
-            - must be list[str]
-            - must be readable paths
-
-        If None:
-            forcing files will be constructed inside set_experiments().
-        """
-        if forcing_files is None:
-            return
-
-        if not isinstance(forcing_files, list):
-            raise TypeError(
-                "'antitracer_forcing_files' must be a list of file paths, or None."
-            )
-
-        for f in forcing_files:
-            if not isinstance(f, str):
-                raise TypeError(
-                    "'antitracer_forcing_files' entries must be strings representing file paths."
-                )
-            if not os.path.exists(f):
-                raise FileNotFoundError(f"ANTITRACER forcing file not found: {f}")
-
     # -------------------------------------------------------------------------
     # MAIN TABLE BUILDER
     # -------------------------------------------------------------------------
@@ -529,6 +497,7 @@ class global_irf_map:
                     start_date=start_dates[0],
                     cdr_forcing=None,
                     cdr_forcing_files=None,
+                    cdr_forcing_varnames=None,
                     beta_file=None,
                     case=f"{self.blueprint}.{project_sname}.control.{self.vintage}",
                     simulation_key="baseline",
@@ -546,12 +515,9 @@ class global_irf_map:
 
             cfg = self.antitracer_config
 
-            if self.antitracer_forcing_files is not None:
-                forcing_files = list(self.antitracer_forcing_files)
-            else:
-                forcing_files = []
-
             master_indices = []
+            forcing_files = []
+            varnames = []
 
             for exp in cfg["experiments"]:
                 b = exp["basin"]
@@ -563,12 +529,8 @@ class global_irf_map:
                     raise ValueError(f"No master index for basin={b}, polygon={p}")
                 master_indices.append(midx)
 
-                # Build file only if user did not provide their own
-                if forcing_files is not None and len(forcing_files) == 0:
-                    fpath = generic_file(b, p, d)
-                    if not os.path.exists(fpath):
-                        raise FileNotFoundError(f"Forcing file not found: {fpath}")
-                    forcing_files.append(fpath)
+                forcing_files.append(exp["forcing_file"])
+                varnames.append(exp["varname"])
 
             # Simulation name
             simname = f"{self.simulation_name}_{cfg['date']}_{cfg['suffix']}"
@@ -588,6 +550,7 @@ class global_irf_map:
                     start_date=cfg["date"],
                     cdr_forcing=self.cdr_forcing,
                     cdr_forcing_files=forcing_files,
+                    cdr_forcing_varnames=varnames,
                     beta_file=cfg["beta_file"],
                     antitracer_master_indices=master_indices,
                     case=case,
@@ -712,9 +675,10 @@ class global_irf_map:
                     "run_local": run_local,
                 }
 
-                # If it's an ANTITRACER run, add the master indices to the arguments
+                # If it's an ANTITRACER run, add some more stuff to the arguments
                 if caseinfo["cdr_forcing"] == "ANTITRACER":
                     build_kwargs["antitracer_master_indices"] = caseinfo["antitracer_master_indices"]
+                    build_kwargs["cdr_forcing_varnames"] = caseinfo["cdr_forcing_varnames"]
                     build_kwargs["beta_file"] = caseinfo["beta_file"]
 
                 # Call submit_build using the complete dictionary of arguments
