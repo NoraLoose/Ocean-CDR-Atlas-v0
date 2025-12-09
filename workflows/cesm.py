@@ -24,18 +24,17 @@ cesm_inputdata = paths["cesm_inputdata_ro"]
 def create_smyle_clone(
     case,
     refdate="0347-01-01",
-    #queue="regular",
-    queue="debug",
+    queue="regular",
     cdr_forcing=None,
     cdr_forcing_files=None,
+    cdr_forcing_varnames=None,
     beta_file=None,
     antitracer_master_indices=None,
     clobber=False,
     curtail_output=True,
     stop_n=15,
     stop_option="nyear",
-    #wallclock="48:00:00",
-    wallclock="30:00",
+    wallclock="48:00:00",
     resubmit=0,
 ):
 
@@ -53,16 +52,6 @@ def create_smyle_clone(
     # ----------------------------------------------------------------------
     if cdr_forcing == "ANTITRACER":
     
-        # -- cdr_forcing_files must be a non-empty list
-        if not isinstance(cdr_forcing_files, list):
-            raise TypeError(
-                "For 'ANTITRACER', 'cdr_forcing_files' must be a list of file paths."
-            )
-        if len(cdr_forcing_files) == 0:
-            raise ValueError(
-                "For 'ANTITRACER', 'cdr_forcing_files' list cannot be empty."
-            )
-    
         # -- master indices must be provided
         if not isinstance(antitracer_master_indices, list):
             raise TypeError(
@@ -71,26 +60,35 @@ def create_smyle_clone(
 
         # Number of tracers defined by the configuration
         n_tracers = len(antitracer_master_indices)
-        forcing_files = cdr_forcing_files
     
+        # -- cdr_forcing_files must be a list
+        if not isinstance(cdr_forcing_files, list):
+            raise TypeError(
+                "For 'ANTITRACER', 'cdr_forcing_files' must be a list of file paths."
+            )
+
         # --- Validate forcing file count -----------------------------------
-        if len(forcing_files) == 1:
-            # Replicate the single file for all tracers
-            antitracer_forcing_files = forcing_files * n_tracers
-    
-        elif len(forcing_files) == n_tracers:
-            # One file per tracer
-            antitracer_forcing_files = forcing_files
-    
-        else:
-            # Mismatch between file count and tracers
+        if len(cdr_forcing_files) != n_tracers:
             raise ValueError(
                 "Invalid ANTITRACER forcing configuration:\n"
-                f"- Provided forcing files: {len(forcing_files)}\n"
+                f"- Provided forcing files: {len(cdr_forcing_files)}\n"
                 f"- Number of tracers:     {n_tracers}\n\n"
-                "Expected either:\n"
-                "  1. A single file (will be replicated for all tracers), OR\n"
-                "  2. One file per tracer.\n"
+                "Expected: One file per tracer.\n"
+            )
+
+        # -- cdr_forcing_varnames must be a list
+        if not isinstance(cdr_forcing_varnames, list):
+            raise TypeError(
+                "For 'ANTITRACER', 'cdr_forcing_varnames' must be a list of varnames."
+            )
+
+        # --- Validate varname count -----------------------------------
+        if len(cdr_forcing_varnames) != n_tracers:
+            raise ValueError(
+                "Invalid ANTITRACER forcing configuration:\n"
+                f"- Provided varnames: {len(cdr_forcing_varnames)}\n"
+                f"- Number of tracers:     {n_tracers}\n\n"
+                "Expected: One varname per tracer.\n"
             )
 
         # -- validate beta file
@@ -184,7 +182,7 @@ def create_smyle_clone(
     xmlchange("CICE_DECOMPSETTING='square-ice'")
 
     if cdr_forcing == "ANTITRACER":
-        xmlchange(f"ANTITRACER_TRACER_CNT={len(antitracer_forcing_files)}")
+        xmlchange(f"ANTITRACER_TRACER_CNT={n_tracers}")
         xmlchange("OCN_TRACER_MODULES='antitracer'")
     else:
         xmlchange("OCN_TRACER_MODULES='iage ecosys'")
@@ -371,6 +369,7 @@ def create_smyle_clone(
     else:
         user_nl["pop"] = ""
 
+
     if curtail_output:
         user_nl["pop"] += textwrap.dedent(
             f"""\
@@ -384,15 +383,28 @@ def create_smyle_clone(
         """
         )
     else:
-        if cdr_forcing != "ANTITRACER":
-            user_nl["pop"] += textwrap.dedent(
-                    f"""\
-                    &tavg_nml
-                      n_tavg_streams = 3
-                    /
-                    """
-                )
-                
+        user_nl["pop"] += textwrap.dedent(
+            f"""\
+        n_tavg_streams = 2
+
+        tavg_freq_opt           = 'nmonth', 'nday'
+        tavg_freq               = 1, 1
+        tavg_file_freq_opt      = 'nmonth', 'nmonth'
+        tavg_file_freq          = 1, 1
+        tavg_start_opt          = 'nstep', 'nstep'
+        tavg_start              = 0, 0
+        tavg_fmt_in             = 'nc', 'nc'
+        tavg_fmt_out            = 'nc', 'nc'
+        tavg_stream_filestrings = 'nmonth1', 'nday1'
+
+        ldiag_bsf = .false.    
+        diag_gm_bolus = .false.
+        moc_requested = .false.
+        n_heat_trans_requested = .false.
+        n_salt_trans_requested = .false.
+        ldiag_global_tracer_budgets = .false.
+        """
+        )
         
     if cdr_forcing == "ANTITRACER":
         antitracer_on = ".true."
@@ -404,26 +416,7 @@ def create_smyle_clone(
         antitracer_nl_entries.append(f"  init_antitracer_init_file_fmt = 'bin'")
 
         # --- Generate namelist entries ---
-        for i, (fpath, master_idx) in enumerate(zip(antitracer_forcing_files, antitracer_master_indices)):
-            idx = i + 1
-            padded_master_idx = f"{master_idx:03d}"
-        
-            antitracer_nl_entries.append(
-                f"  antitracer_forcing_nml_array({idx})%name = 'ANTITRACER{padded_master_idx}'"
-            )
-            antitracer_nl_entries.append(
-                f"  antitracer_forcing_nml_array({idx})%file = '{fpath}'"
-            )
-            antitracer_nl_entries.append(
-                f"  antitracer_forcing_nml_array({idx})%varname = 'alk_forcing'"
-            )
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_first = 1999")
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_last  = 2019")
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_align = 347")
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%scale_factor = 1.0e5")
-
-
-        for i, (fpath, master_idx) in enumerate(zip(cdr_forcing_files, antitracer_master_indices)):
+        for i, (fpath, varname, master_idx) in enumerate(zip(cdr_forcing_files, cdr_forcing_varnames, antitracer_master_indices)):
             idx = i + 1 # Fortran 1-based index
             
             padded_master_idx = f"{master_idx:03d}"
@@ -431,7 +424,7 @@ def create_smyle_clone(
             # Use the padded index in the namelist entry
             antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%name = 'ANTITRACER{padded_master_idx}'")
             antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%file = '{fpath}'")
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%varname = 'alk_forcing'")
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%varname = '{varname}'")
             antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_first = 1999")
             antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_last = 2019")
             antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_align = 347")
