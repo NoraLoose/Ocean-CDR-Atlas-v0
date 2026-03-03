@@ -21,6 +21,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+from dataclasses import dataclass
 import click
 import papermill as pm
 from papermill.engines import NBClientEngine
@@ -82,7 +83,7 @@ def submit_bundle(cases, n_bundle=100, nodes_per_case=7, queue="regular"):
         #SBATCH --qos={queue}
         #SBATCH --nodes={n_nodes}
         #SBATCH --ntasks-per-node=128
-        #SBATCH --time=48:00:00
+        #SBATCH --time=00:30:00
         #SBATCH --exclusive
         #SBATCH --constraint=cpu
 
@@ -290,6 +291,35 @@ class md_jinja_engine(NBClientEngine):
 # what's the right way to register an engine?
 pm.engines.papermill_engines._engines["md_jinja"] = md_jinja_engine
 
+@dataclass
+class BetaForcing:
+    file: Path
+    varname: str
+    year_first: int
+    year_last: int
+    year_align: int
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        """Creates an instance from the 'beta_forcing' section of the YAML."""
+        return cls(
+            file=Path(data["file"]),
+            varname=data["varname"],
+            year_first=int(data["year_first"]),
+            year_last=int(data["year_last"]),
+            year_align=int(data["year_align"])
+        )
+
+    def to_namelist_dict(self):
+        """Returns a dictionary suitable for injecting into a master table or row."""
+        return {
+            "beta_file": str(self.file),
+            "beta_varname": self.varname,
+            "beta_year_first": self.year_first,
+            "beta_year_last": self.year_last,
+            "beta_year_align": self.year_align,
+        }
+        
 class global_irf_map:
     """
     Build and manage IRF (Impulse Response Function) simulation metadata
@@ -306,7 +336,7 @@ class global_irf_map:
         - 'suffix' : str
         - 'date'   : str
         - 'experiments' : list[{"basin": str, "polygon": int, "forcing_file": str | Path}, "varname": str]
-        - 'beta_file' : str or Path (path to β-forcing file)
+        - 'beta_forcing' : dict with keys "file", "varname", "year_align", "year_first", "year_last"
     """
 
     def __init__(
@@ -355,20 +385,17 @@ class global_irf_map:
     # -------------------------------------------------------------------------
     # VALIDATION HELPERS
     # -------------------------------------------------------------------------
-
     def _validate_antitracer_config(self) -> None:
         """
-        Validate ANTITRACER configuration dictionary.
-        Ensures presence of required keys and validity of 'beta_file'.
+        Validate ANTITRACER configuration and initialize BetaForcing object.
         """
-
+        # 1. Basic type check
         if not isinstance(self.antitracer_config, dict) or not self.antitracer_config:
-            raise ValueError(
-                "When cdr_forcing='ANTITRACER', 'antitracer_config' must be a "
-                "non-empty dictionary."
-            )
+            raise ValueError("antitracer_config must be a non-empty dictionary.")
 
-        required_keys = ["suffix", "date", "experiments", "beta_file"]
+        # 2. Check top-level required keys
+        # Note: 'beta_forcing' is now a required top-level key
+        required_keys = ["suffix", "date", "experiments", "beta_forcing"]
         for key in required_keys:
             if key not in self.antitracer_config:
                 raise ValueError(
@@ -376,7 +403,16 @@ class global_irf_map:
                     f"Required keys: {required_keys}"
                 )
 
-        # Validate experiments
+        # 3. Validate and initialize BetaForcing object
+        try:
+            self.beta_info = BetaForcing.from_dict(self.antitracer_config["beta_forcing"])
+        except KeyError as e:
+            raise KeyError(f"Missing parameter in 'beta_forcing' block: {e}")
+
+        if not self.beta_info.file.exists():
+            raise FileNotFoundError(f"beta_file not found: {self.beta_info.file}")
+
+        # 4. Validate experiments list
         experiments = self.antitracer_config["experiments"]
         if not isinstance(experiments, list) or not experiments:
             raise ValueError("'experiments' must be a non-empty list.")
@@ -384,24 +420,14 @@ class global_irf_map:
         for exp in experiments:
             if not isinstance(exp, dict):
                 raise TypeError("Each experiment must be a dictionary.")
-            required = ["basin", "polygon", "forcing_file", "varname"]
-            for k in required:
+            
+            required_exp = ["basin", "polygon", "forcing_file", "varname"]
+            for k in required_exp:
                 if k not in exp:
                     raise ValueError(
-                        f"Each experiment must contain {required}, missing '{k}'."
+                        f"Each experiment must contain {required_exp}, missing '{k}'."
                     )
-        
-        # Validate beta_file
-        beta_file = self.antitracer_config["beta_file"]
-        if not isinstance(beta_file, (str, Path)):
-            raise TypeError("'beta_file' must be a string or Path.")
-        beta_file = Path(beta_file)
-
-        if not beta_file.exists():
-            raise FileNotFoundError(
-                f"beta_file does not exist: {beta_file}"
-            )
-        
+                    
     # -------------------------------------------------------------------------
     # MAIN TABLE BUILDER
     # -------------------------------------------------------------------------
@@ -456,7 +482,7 @@ class global_irf_map:
         # -------------------------
         nyear_case = 1
         nyear_baseline = 16
-
+        
         periods_case = nyear_case * 12
         periods_baseline = nyear_baseline * 12
 
@@ -498,12 +524,11 @@ class global_irf_map:
                     cdr_forcing=None,
                     cdr_forcing_files=None,
                     cdr_forcing_varnames=None,
-                    beta_file=None,
                     case=f"{self.blueprint}.{project_sname}.control.{self.vintage}",
                     simulation_key="baseline",
                     refdate=ref_dates[0],
                     stop_n=nyear_baseline,
-                    wallclock="00:30:00",
+                    wallclock="48:00:00",
                     curtail_output=False,
                 )
             )
@@ -542,25 +567,29 @@ class global_irf_map:
             except ValueError:
                 raise ValueError(f"Invalid ANTITRACER start_date {cfg['date']}")
 
-            rows.append(
-                dict(
-                    blueprint=self.blueprint,
-                    polygon=None,
-                    basin=None,
-                    start_date=cfg["date"],
-                    cdr_forcing=self.cdr_forcing,
-                    cdr_forcing_files=forcing_files,
-                    cdr_forcing_varnames=varnames,
-                    beta_file=cfg["beta_file"],
-                    antitracer_master_indices=master_indices,
-                    case=case,
-                    simulation_key=simname,
-                    refdate=refdate,
-                    stop_n=nyear_case,
-                    wallclock="10:00:00",
-                    curtail_output=True,
-                )
+            # Define the base row dictionary
+            row_data = dict(
+                blueprint=self.blueprint,
+                polygon=None,
+                basin=None,
+                start_date=cfg["date"],
+                cdr_forcing=self.cdr_forcing,
+                cdr_forcing_files=forcing_files,
+                cdr_forcing_varnames=varnames,
+                antitracer_master_indices=master_indices,
+                case=case,
+                simulation_key=simname,
+                refdate=refdate,
+                stop_n=nyear_case,
+                #wallclock="48:00:00",
+                wallclock="00:30:00",
+                curtail_output=True,
             )
+
+            # This adds beta_file, beta_varname, beta_year_first, etc. to the row
+            row_data.update(self.beta_info.to_namelist_dict())
+
+            rows.append(row_data)
 
         # ---------------------------------------------------------------------
         # REGULAR SINGLE-POLYGON FORCING (OAE/ERW/DOR)
@@ -677,9 +706,11 @@ class global_irf_map:
 
                 # If it's an ANTITRACER run, add some more stuff to the arguments
                 if caseinfo["cdr_forcing"] == "ANTITRACER":
+                    # This adds beta_file, beta_varname, beta_year_first, etc. 
+                    # as individual keys to the dictionary sent to atlas.py
+                    build_kwargs.update(self.beta_info.to_namelist_dict())
                     build_kwargs["antitracer_master_indices"] = caseinfo["antitracer_master_indices"]
                     build_kwargs["cdr_forcing_varnames"] = caseinfo["cdr_forcing_varnames"]
-                    build_kwargs["beta_file"] = caseinfo["beta_file"]
 
                 # Call submit_build using the complete dictionary of arguments
                 submit_build(**build_kwargs)

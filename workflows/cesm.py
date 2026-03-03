@@ -17,25 +17,33 @@ scriptroot = paths["workflow"]
 os.makedirs(f"{scriptroot}/output/build-in", exist_ok=True)
 os.makedirs(f"{scriptroot}/output/build-out", exist_ok=True)
 
-
+PYTHON_MODULE = "python/3.10-24.1.0"
 cesm_inputdata = paths["cesm_inputdata_ro"]
-
 
 def create_smyle_clone(
     case,
     refdate="0347-01-01",
     queue="regular",
+    #queue="debug",
     cdr_forcing=None,
     cdr_forcing_files=None,
     cdr_forcing_varnames=None,
     beta_file=None,
+    beta_varname="dDICdCO2",
+    beta_year_first=1998,
+    beta_year_last=2020,
+    beta_year_align=347,
     antitracer_master_indices=None,
     clobber=False,
     curtail_output=True,
-    stop_n=15,
+    stop_n=1, # antitracer
+    #stop_n=16, # control
     stop_option="nyear",
     wallclock="48:00:00",
+    #resubmit=14, # antitracer
+    #resubmit=1,
     resubmit=0,
+    #resubmit=0, # control
 ):
 
     caseroot = f"{paths['cases']}/{case}"
@@ -127,7 +135,7 @@ def create_smyle_clone(
     check_call(
         " ".join(
             [
-                "module load python",
+                f"module load {PYTHON_MODULE}",
                 "&&",
                 "./create_newcase",
                 "--compset",
@@ -157,7 +165,7 @@ def create_smyle_clone(
 
     def xmlchange(arg, force=False):
         """call xmlchange"""
-        check_call(f"module load python && ./xmlchange {arg}", cwd=caseroot, shell=True)
+        check_call(f"module load {PYTHON_MODULE} && ./xmlchange {arg}", cwd=caseroot, shell=True)
 
     xmlchange("MAX_TASKS_PER_NODE=128")
     xmlchange("MAX_MPITASKS_PER_NODE=128")
@@ -234,7 +242,7 @@ def create_smyle_clone(
             check_call(
                 " ".join(
                     [
-                        "module load python",
+                        f"module load {PYTHON_MODULE}",
                         "&&",
                         f"{paths['src']}/components/pop/externals/MARBL/MARBL_tools/./yaml_to_json.py",
                         "-y",
@@ -281,7 +289,7 @@ def create_smyle_clone(
     )
 
     check_call(
-        "module load python && ./case.setup",
+        f"module load {PYTHON_MODULE} && ./case.setup",
         cwd=caseroot,
         shell=True,
     )
@@ -411,9 +419,8 @@ def create_smyle_clone(
 
         # Generate antitracer-specific namelist entries for user_nl_pop
         antitracer_nl_entries = []
-        antitracer_nl_entries.append(f"  init_antitracer_option = 'zero'")
-        antitracer_nl_entries.append(f"  init_antitracer_init_file = 'unknown'")
-        antitracer_nl_entries.append(f"  init_antitracer_init_file_fmt = 'bin'")
+        antitracer_nl_entries.append("  init_antitracer_option = 'zero'")
+        antitracer_nl_entries.append("  init_antitracer_init_file = 'same_as_TS'")
 
         # --- Generate namelist entries ---
         for i, (fpath, varname, master_idx) in enumerate(zip(cdr_forcing_files, cdr_forcing_varnames, antitracer_master_indices)):
@@ -435,10 +442,10 @@ def create_smyle_clone(
         
         beta_nl_str = textwrap.dedent(f"""
           beta_forcing_nml%file = '{str(beta_file)}'
-          beta_forcing_nml%varname = 'dDICdCO2'
-          beta_forcing_nml%year_first = 1998
-          beta_forcing_nml%year_last = 2020
-          beta_forcing_nml%year_align = 347
+          beta_forcing_nml%varname = '{str(beta_varname)}'
+          beta_forcing_nml%year_first = {beta_year_first}
+          beta_forcing_nml%year_last = {beta_year_last}
+          beta_forcing_nml%year_align = {beta_year_align}
         """)
 
         pop_nl_content = textwrap.dedent(f"""\
@@ -478,7 +485,7 @@ def create_smyle_clone(
 
     print(caseroot)
     check_call(
-        "module load python && ./case.build --skip-provenance-check",
+        f"module load {PYTHON_MODULE} && ./case.build --skip-provenance-check",
         cwd=caseroot,
         shell=True,
     )
@@ -523,7 +530,7 @@ def create_hr_4p2z_clone(
     check_call(
         " ".join(
             [
-                "module load python",
+                f"module load {PYTHON_MODULE}",
                 "&&",
                 "./create_newcase",
                 "--compset",
@@ -554,7 +561,7 @@ def create_hr_4p2z_clone(
     def xmlchange(arg, opt="", force=False):
         """call xmlchange"""
         check_call(
-            f"module load python && ./xmlchange {opt} {arg}", cwd=caseroot, shell=True
+            f"module load {PYTHON_MODULE} && ./xmlchange {opt} {arg}", cwd=caseroot, shell=True
         )
 
     xmlchange(f"RUNDIR={rundir}")
@@ -595,7 +602,7 @@ def create_hr_4p2z_clone(
     xmlchange(f"JOB_QUEUE={queue}")
 
     check_call(
-        "module load python && ./case.setup",
+        f"module load {PYTHON_MODULE} && ./case.setup",
         cwd=caseroot,
         shell=True,
     )
@@ -666,7 +673,7 @@ def create_hr_4p2z_clone(
     )
 
     check_call(
-        "module load python && ./case.build --skip-provenance-check",
+        f"module load {PYTHON_MODULE} && ./case.build --skip-provenance-check",
         cwd=caseroot,
         shell=True,
     )
