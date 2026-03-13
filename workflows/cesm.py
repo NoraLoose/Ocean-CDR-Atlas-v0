@@ -33,6 +33,11 @@ def create_smyle_clone(
     beta_year_first=1998,
     beta_year_last=2020,
     beta_year_align=347,
+    eta_file=None,
+    eta_varname="dDICdALK",
+    eta_year_first=1998,
+    eta_year_last=2020,
+    eta_year_align=347,
     antitracer_master_indices=None,
     clobber=False,
     curtail_output=True,
@@ -104,16 +109,33 @@ def create_smyle_clone(
             raise ValueError(
                 "For 'ANTITRACER', 'beta_file' must be provided and cannot be None."
             )
-    
+
         if not isinstance(beta_file, (str, Path)):
             raise TypeError(
                 f"'beta_file' must be a string or Path, got {type(beta_file)}"
             )
-    
+
         beta_path = Path(beta_file)
         if not beta_path.exists():
             raise FileNotFoundError(
                 f"'beta_file' does not exist: {beta_path}"
+            )
+
+        # -- validate eta file
+        if eta_file is None:
+            raise ValueError(
+                "For 'ANTITRACER', 'eta_file' must be provided and cannot be None."
+            )
+
+        if not isinstance(eta_file, (str, Path)):
+            raise TypeError(
+                f"'eta_file' must be a string or Path, got {type(eta_file)}"
+            )
+
+        eta_path = Path(eta_file)
+        if not eta_path.exists():
+            raise FileNotFoundError(
+                f"'eta_file' does not exist: {eta_path}"
             )
 
 
@@ -448,6 +470,14 @@ def create_smyle_clone(
           beta_forcing_nml%year_align = {beta_year_align}
         """)
 
+        eta_nl_str = textwrap.dedent(f"""
+          eta_forcing_nml%file = '{str(eta_file)}'
+          eta_forcing_nml%varname = '{str(eta_varname)}'
+          eta_forcing_nml%year_first = {eta_year_first}
+          eta_forcing_nml%year_last = {eta_year_last}
+          eta_forcing_nml%year_align = {eta_year_align}
+        """)
+
         pop_nl_content = textwrap.dedent(f"""\
         &sw_absorption_nml
           chl_option = 'file'
@@ -458,6 +488,7 @@ def create_smyle_clone(
         &antitracer_nml
         {antitracer_nl_str}
         {beta_nl_str}
+        {eta_nl_str}
         /""")
 
         user_nl["pop"] = user_nl["pop"] + "\n" + pop_nl_content.strip()

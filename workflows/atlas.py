@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 import click
 import papermill as pm
 from papermill.engines import NBClientEngine
@@ -383,7 +383,8 @@ class md_jinja_engine(NBClientEngine):
 pm.engines.papermill_engines._engines["md_jinja"] = md_jinja_engine
 
 @dataclass
-class BetaForcing:
+class ForcingField:
+    """Generic forcing field descriptor (beta, eta, or other sensitivity fields)."""
     file: Path
     varname: str
     year_first: int
@@ -392,7 +393,6 @@ class BetaForcing:
 
     @classmethod
     def from_dict(cls, data: dict):
-        """Creates an instance from the 'beta_forcing' section of the YAML."""
         return cls(
             file=Path(data["file"]),
             varname=data["varname"],
@@ -401,14 +401,20 @@ class BetaForcing:
             year_align=int(data["year_align"])
         )
 
-    def to_namelist_dict(self):
-        """Returns a dictionary suitable for injecting into a master table or row."""
+    def to_dict(self):
+        """Convert to a JSON-serializable dictionary."""
+        out = asdict(self)
+        out["file"] = str(self.file)
+        return out
+
+    def to_namelist_dict(self, prefix: str = "beta_"):
+        """Returns a flat dictionary with keys prefixed by `prefix`."""
         return {
-            "beta_file": str(self.file),
-            "beta_varname": self.varname,
-            "beta_year_first": self.year_first,
-            "beta_year_last": self.year_last,
-            "beta_year_align": self.year_align,
+            f"{prefix}file": str(self.file),
+            f"{prefix}varname": self.varname,
+            f"{prefix}year_first": self.year_first,
+            f"{prefix}year_last": self.year_last,
+            f"{prefix}year_align": self.year_align,
         }
         
 class global_irf_map:
@@ -426,8 +432,9 @@ class global_irf_map:
         ANTITRACER configuration. Must contain the keys:
         - 'suffix' : str
         - 'date'   : str
-        - 'experiments' : list[{"basin": str, "polygon": int, "forcing_file": str | Path}, "varname": str]
+        - 'experiments' : list[{"basin": str, "polygon": int, "forcing_file": str | Path, "varname": str, "is_alk": bool}]
         - 'beta_forcing' : dict with keys "file", "varname", "year_align", "year_first", "year_last"
+        - 'eta_forcing'  : dict with keys "file", "varname", "year_align", "year_first", "year_last"
     """
 
     def __init__(
@@ -478,15 +485,14 @@ class global_irf_map:
     # -------------------------------------------------------------------------
     def _validate_antitracer_config(self) -> None:
         """
-        Validate ANTITRACER configuration and initialize BetaForcing object.
+        Validate ANTITRACER configuration and initialize ForcingField objects.
         """
         # 1. Basic type check
         if not isinstance(self.antitracer_config, dict) or not self.antitracer_config:
             raise ValueError("antitracer_config must be a non-empty dictionary.")
 
         # 2. Check top-level required keys
-        # Note: 'beta_forcing' is now a required top-level key
-        required_keys = ["suffix", "date", "experiments", "beta_forcing"]
+        required_keys = ["suffix", "date", "experiments", "beta_forcing", "eta_forcing"]
         for key in required_keys:
             if key not in self.antitracer_config:
                 raise ValueError(
@@ -494,14 +500,22 @@ class global_irf_map:
                     f"Required keys: {required_keys}"
                 )
 
-        # 3. Validate and initialize BetaForcing object
+        # 3. Validate and initialize ForcingField objects
         try:
-            self.beta_info = BetaForcing.from_dict(self.antitracer_config["beta_forcing"])
+            self.beta_info = ForcingField.from_dict(self.antitracer_config["beta_forcing"])
         except KeyError as e:
             raise KeyError(f"Missing parameter in 'beta_forcing' block: {e}")
 
         if not self.beta_info.file.exists():
             raise FileNotFoundError(f"beta_file not found: {self.beta_info.file}")
+
+        try:
+            self.eta_info = ForcingField.from_dict(self.antitracer_config["eta_forcing"])
+        except KeyError as e:
+            raise KeyError(f"Missing parameter in 'eta_forcing' block: {e}")
+
+        if not self.eta_info.file.exists():
+            raise FileNotFoundError(f"eta_file not found: {self.eta_info.file}")
 
         # 4. Validate experiments list
         experiments = self.antitracer_config["experiments"]
@@ -511,8 +525,8 @@ class global_irf_map:
         for exp in experiments:
             if not isinstance(exp, dict):
                 raise TypeError("Each experiment must be a dictionary.")
-            
-            required_exp = ["basin", "polygon", "forcing_file", "varname"]
+
+            required_exp = ["basin", "polygon", "forcing_file", "varname", "is_alk"]
             for k in required_exp:
                 if k not in exp:
                     raise ValueError(
@@ -677,8 +691,9 @@ class global_irf_map:
                 curtail_output=True,
             )
 
-            # This adds beta_file, beta_varname, beta_year_first, etc. to the row
-            row_data.update(self.beta_info.to_namelist_dict())
+            # Flatten beta and eta forcing fields into the row
+            row_data.update(self.beta_info.to_namelist_dict("beta_"))
+            row_data.update(self.eta_info.to_namelist_dict("eta_"))
 
             rows.append(row_data)
 
@@ -795,11 +810,10 @@ class global_irf_map:
                     "run_local": run_local,
                 }
 
-                # If it's an ANTITRACER run, add some more stuff to the arguments
+                # If it's an ANTITRACER run, add beta/eta forcing and tracer metadata
                 if caseinfo["cdr_forcing"] == "ANTITRACER":
-                    # This adds beta_file, beta_varname, beta_year_first, etc. 
-                    # as individual keys to the dictionary sent to atlas.py
-                    build_kwargs.update(self.beta_info.to_namelist_dict())
+                    build_kwargs.update(self.beta_info.to_namelist_dict("beta_"))
+                    build_kwargs.update(self.eta_info.to_namelist_dict("eta_"))
                     build_kwargs["antitracer_master_indices"] = caseinfo["antitracer_master_indices"]
                     build_kwargs["cdr_forcing_varnames"] = caseinfo["cdr_forcing_varnames"]
 
