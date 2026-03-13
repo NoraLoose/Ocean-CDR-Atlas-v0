@@ -23,6 +23,7 @@ if CONFIG == "monthly":
 
     file_suffix = "monthly"
     USE_S3 = True
+    TIME_CHUNK = None  # process all at once
 
     S3_DATA_FILE = (
         "s3://us-west-2.opendata.source.coop/cworthy/"
@@ -48,6 +49,7 @@ else:
 
     file_suffix = "daily"
     USE_S3 = False
+    TIME_CHUNK = 30  # process ~one month at a time to avoid OOM
 
     LOCAL_PREFIX = (
         "/global/cfs/projectdirs/m4746/Users/nora/Ocean-CDR-Atlas-v0/"
@@ -166,7 +168,20 @@ print("Fixing time axis...")
 ds = move_time_to_middle(ds)
 
 print("Computing carbonate sensitivities...")
-beta, eta = compute_carbonate_sensitivity(ds)
+if TIME_CHUNK is None:
+    beta, eta = compute_carbonate_sensitivity(ds)
+else:
+    n_time = ds.dims["time"]
+    betas, etas = [], []
+    for i in range(0, n_time, TIME_CHUNK):
+        print(f"  chunk {i}–{min(i + TIME_CHUNK, n_time) - 1} / {n_time - 1}")
+        ds_chunk = ds.isel(time=slice(i, i + TIME_CHUNK))
+        ds_chunk.load()
+        beta_chunk, eta_chunk = compute_carbonate_sensitivity(ds_chunk)
+        betas.append(beta_chunk)
+        etas.append(eta_chunk)
+    beta = np.concatenate(betas, axis=0)
+    eta = np.concatenate(etas, axis=0)
 
 print("Building dataset...")
 ds_out = xr.Dataset(
