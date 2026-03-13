@@ -17,7 +17,7 @@ scriptroot = paths["workflow"]
 os.makedirs(f"{scriptroot}/output/build-in", exist_ok=True)
 os.makedirs(f"{scriptroot}/output/build-out", exist_ok=True)
 
-PYTHON_MODULE = "python/3.10-24.1.0"
+PYTHON_MODULE = "python/3.11-24.1.0"
 cesm_inputdata = paths["cesm_inputdata_ro"]
 
 def create_smyle_clone(

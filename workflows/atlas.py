@@ -1,5 +1,6 @@
 import os
 from subprocess import check_call
+import subprocess
 from glob import glob
 
 import itertools
@@ -31,6 +32,8 @@ import cesm
 import analysis
 from config import paths, project_sname, account, kernel_name
 
+PYTHON_MODULE = "python/3.11-24.1.0"
+
 scriptroot = paths["workflow"]
 
 path_validation_data = f"{paths['data']}/validation"
@@ -44,7 +47,6 @@ os.makedirs(path_validation_nb_out, exist_ok=True)
 
 path_analysis_nb_out = f"{scriptroot}/output/analysis"
 os.makedirs(path_analysis_nb_out, exist_ok=True)
-
 archive_root = f"{paths['data']}/archive"
 
 
@@ -64,7 +66,27 @@ def get_cftime(ds):
         ),
     )
 
+def verify_binary(path):
+    """Checks the cesm.exe for 'not found' libraries and prints the full list."""
+    exe = os.path.join(path, "bld", "cesm.exe")
+    if not os.path.exists(exe):
+        raise FileNotFoundError(f"Binary missing: {exe}")
 
+    # Use the current environment (including any LD_LIBRARY_PATH we set in Python)
+    result = subprocess.run(["ldd", exe], capture_output=True, text=True)
+    
+    print(f"\n--- Dependency Check for {os.path.basename(path)} ---")
+    print(result.stdout)
+    
+    if "not found" in result.stdout:
+        missing = [line for line in result.stdout.split('\n') if "not found" in line]
+        print("❌ FATAL: Missing libraries detected!")
+        for m in missing:
+            print(f"  {m.strip()}")
+        raise RuntimeError("Library resolution failed. Check your modules and LD_LIBRARY_PATH.")
+    
+    print("✅ All libraries linked correctly.")
+    
 def submit_bundle(cases, n_bundle=100, nodes_per_case=7, queue="regular"):
     """submit a bundle of cases"""
 
@@ -88,9 +110,32 @@ def submit_bundle(cases, n_bundle=100, nodes_per_case=7, queue="regular"):
         #SBATCH --constraint=cpu
 
         set -e
-        
-        module load python
-        
+
+        module load {PYTHON_MODULE}
+
+        # 1. Neutralize the Cray "Leapfrog" effect
+        # Stops the system from prepending 2026 paths automatically
+        unset CRAY_LD_LIBRARY_PATH
+
+        # 2. Brute-force the 2023.2 paths to the very front of the line
+        export NETCDF_LIB="/opt/cray/pe/netcdf/4.9.0.13/intel/2023.2/lib"
+        export PNETCDF_LIB="/opt/cray/pe/parallel-netcdf/1.12.3.13/intel/2023.2/lib"
+        export INTEL_LIB="/opt/intel/oneapi/mkl/2023.2.0/lib/intel64"
+        export COMPILER_LIB="/opt/intel/oneapi/compiler/2023.2.0/linux/compiler/lib/intel64"
+
+        export LD_LIBRARY_PATH=$NETCDF_LIB:$PNETCDF_LIB:$INTEL_LIB:$COMPILER_LIB:$LD_LIBRARY_PATH
+
+        # 3. Standard Stability Fixes
+        ulimit -s unlimited
+        export MKL_DEBUG_CPU_TYPE=5
+        export FI_CXI_RX_MATCH_MODE=software
+        export FI_MR_CACHE_MONITOR=memhooks
+
+        echo "--- RUNTIME LINKER RESOLUTION ---"
+        # We use a dummy check for the first case in the bundle to verify paths
+        # This will show up in the slurm-.out file
+        ldd {paths['scratch']}/{cases[0]}/bld/cesm.exe | grep -i netcdf
+        echo "---------------------------------"        
         """
     )
 
@@ -102,17 +147,19 @@ def submit_bundle(cases, n_bundle=100, nodes_per_case=7, queue="regular"):
     submitted = []
     submit_batch = []
     for n, case in enumerate(cases):
-
+        
+        #verify_binary(f"{paths['scratch']}/{case}")
+    
         # append to the script
         script.append(
             textwrap.dedent(
                 f"""
-            cd {paths['cases']}/{case}
-            ./case.submit --no-batch &> {submit_out_root}/{case}.submit &
-            
-            """
+                cd {paths['cases']}/{case}
+                ./case.submit --no-batch &> {submit_out_root}/{case}.submit &
+                """
             )
         )
+
         submit_batch.append(case)
 
         # write casename to file with jobname id so we can know which
@@ -214,7 +261,6 @@ def submit_cases(cases, n_simult=10):
         cases
     ), "Not all cases were submitted"
 
-
 def _build_script(blueprint, case, clobber=False, **kwargs):
     """generate a script to build the model"""
 
@@ -248,17 +294,62 @@ def _build_script(blueprint, case, clobber=False, **kwargs):
     #SBATCH --ntasks=1
     #SBATCH --constraint=cpu
 
-    source /opt/cray/pe/cpe/24.07/restore_lmod_system_defaults.sh
     module purge
     module restore
     module load conda
     conda activate cworthy
+
+    # 1. Hard-pin the MKL library directory (Fixes the "not found" errors)
+    export LD_LIBRARY_PATH=/opt/intel/oneapi/mkl/2023.2.0/lib/intel64:$LD_LIBRARY_PATH
+    
+    # 2. Re-assert the Math accuracy fix (The evp-patch replacement)
+    export MKL_DEBUG_CPU_TYPE=5
+    
+    # 3. Extra Safety: Ensure the compiler's own internal libs are visible
+    export LD_LIBRARY_PATH=/opt/intel/oneapi/compiler/2023.2.0/linux/compiler/lib/intel64:$LD_LIBRARY_PATH
+
+    export NETCDF_PATH=/opt/cray/pe/netcdf/4.9.0.13/intel/2023.2
+    export PNETCDF_PATH=/opt/cray/pe/parallel-netcdf/1.12.3.13/intel/2023.2    
+    export LD_LIBRARY_PATH=$NETCDF_PATH/lib:$PNETCDF_PATH/lib:$LD_LIBRARY_PATH
+    
+    echo "--- FULL LOADED MODULE LIST ---"
+    module list
+    echo "----------------------------------"
+
+    echo "--- CRAY ENVIRONMENT AUDIT ---"
+    echo "CRAY_LD_LIBRARY_PATH is: $CRAY_LD_LIBRARY_PATH"
+    module show cray-netcdf 2>&1 | grep -i prefix
+    echo "------------------------------"
     
     {cmd}
+
+    echo "--- POST-BUILD LINKER CHECK ---"
+    # This checks exactly which NetCDF the binary is grabbing
+    ldd "{paths['scratch']}/{case}/bld/cesm.exe" | grep -i netcdf
     
+    echo "--- POST-BUILD SAFETY CHECK ---"
+    EXE_PATH="{paths['scratch']}/{case}/bld/cesm.exe"
+    
+    if [ ! -f "$EXE_PATH" ]; then
+        echo "❌ ERROR: Build failed to produce an executable at $EXE_PATH."
+        exit 1
+    fi
+
+    echo "🔍 FULL RUNTIME DEPENDENCY LIST (ldd):"
+    echo "------------------------------------------------------------"
+    ldd "$EXE_PATH"
+    echo "------------------------------------------------------------"
+
+    if ldd "$EXE_PATH" | grep -q "not found"; then
+        echo "❌ FATAL: Missing dependencies detected above!"
+        exit 1
+    else
+        echo "✅ Binary verified. All shared libraries resolved."
+    fi
+    # ---------------------------------------
     """
     )
-
+    
     build_script = f"{scriptroot}/output/build-in/{case}.build"
     with open(build_script, "w") as fid:
         fid.write(header)
