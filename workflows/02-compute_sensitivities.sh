@@ -10,8 +10,8 @@
 module load conda
 conda activate cworthy
 
-echo "Running monthly configuration"
-python compute_sensitivities.py --config monthly
+# echo "Running monthly configuration"
+# python compute_sensitivities.py --config monthly
 
 echo "Running daily configuration"
 python compute_sensitivities.py --config daily
