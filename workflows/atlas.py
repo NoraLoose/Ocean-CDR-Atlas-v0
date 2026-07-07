@@ -29,7 +29,6 @@ from papermill.engines import NBClientEngine
 
 import machine
 import cesm
-import analysis
 from config import paths, project_sname, account, kernel_name
 
 PYTHON_MODULE = "python/3.11-24.1.0"
@@ -105,7 +104,7 @@ def submit_bundle(cases, n_bundle=100, nodes_per_case=7, queue="regular"):
         #SBATCH --qos={queue}
         #SBATCH --nodes={n_nodes}
         #SBATCH --ntasks-per-node=128
-        #SBATCH --time=00:30:00
+        #SBATCH --time=48:00:00
         #SBATCH --exclusive
         #SBATCH --constraint=cpu
 
@@ -390,6 +389,8 @@ class ForcingField:
     year_first: int
     year_last: int
     year_align: int
+    tintalgo: str = "linear"
+    taxMode: str = "cycle"
 
     @classmethod
     def from_dict(cls, data: dict):
@@ -398,7 +399,9 @@ class ForcingField:
             varname=data["varname"],
             year_first=int(data["year_first"]),
             year_last=int(data["year_last"]),
-            year_align=int(data["year_align"])
+            year_align=int(data["year_align"]),
+            tintalgo=data.get("tintalgo", "linear"),
+            taxMode=data.get("taxMode", "cycle"),
         )
 
     def to_dict(self):
@@ -415,6 +418,8 @@ class ForcingField:
             f"{prefix}year_first": self.year_first,
             f"{prefix}year_last": self.year_last,
             f"{prefix}year_align": self.year_align,
+            f"{prefix}tintalgo": self.tintalgo,
+            f"{prefix}taxMode": self.taxMode,
         }
         
 class global_irf_map:
@@ -585,6 +590,7 @@ class global_irf_map:
         # -------------------------
         # Time axes
         # -------------------------
+        #nyear_case = 15
         nyear_case = 1
         nyear_baseline = 16
         
@@ -648,6 +654,15 @@ class global_irf_map:
             master_indices = []
             forcing_files = []
             varnames = []
+            is_alk_list = []
+            coupled_alk_idx_list = []
+
+            # Build lookup: (basin, polygon) -> 1-based tracer index for is_alk=True tracers,
+            # so that paired DIC tracers can reference their ALK partner automatically.
+            alk_idx_by_location = {}
+            for i, exp in enumerate(cfg["experiments"]):
+                if exp["is_alk"]:
+                    alk_idx_by_location[(exp["basin"], exp["polygon"])] = i + 1
 
             for exp in cfg["experiments"]:
                 b = exp["basin"]
@@ -659,8 +674,14 @@ class global_irf_map:
                     raise ValueError(f"No master index for basin={b}, polygon={p}")
                 master_indices.append(midx)
 
-                forcing_files.append(exp["forcing_file"])
-                varnames.append(exp["varname"])
+                forcing_files.append(exp["forcing_file"] if exp["forcing_file"] is not None else "unknown")
+                varnames.append(exp["varname"] if exp["varname"] is not None else "unknown")
+                is_alk_list.append(exp["is_alk"])
+
+                if not exp["is_alk"]:
+                    coupled_alk_idx_list.append(alk_idx_by_location.get((b, p), 0))
+                else:
+                    coupled_alk_idx_list.append(0)
 
             # Simulation name
             simname = f"{self.simulation_name}_{cfg['date']}_{cfg['suffix']}"
@@ -682,12 +703,19 @@ class global_irf_map:
                 cdr_forcing_files=forcing_files,
                 cdr_forcing_varnames=varnames,
                 antitracer_master_indices=master_indices,
+                antitracer_is_alk_list=is_alk_list,
+                antitracer_coupled_alk_idx_list=coupled_alk_idx_list,
+                antitracer_year_first=cfg.get("antitracer_year_first", 1999),
+                antitracer_year_last=cfg.get("antitracer_year_last", 2019),
+                antitracer_year_align=cfg.get("antitracer_year_align", 347),
+                antitracer_tintalgo=cfg.get("antitracer_tintalgo", "linear"),
+                antitracer_taxMode=cfg.get("antitracer_taxMode", "cycle"),
                 case=case,
                 simulation_key=simname,
                 refdate=refdate,
                 stop_n=nyear_case,
-                #wallclock="48:00:00",
-                wallclock="00:30:00",
+                wallclock="48:00:00",
+                #wallclock="00:30:00",
                 curtail_output=True,
             )
 
@@ -816,6 +844,13 @@ class global_irf_map:
                     build_kwargs.update(self.eta_info.to_namelist_dict("eta_"))
                     build_kwargs["antitracer_master_indices"] = caseinfo["antitracer_master_indices"]
                     build_kwargs["cdr_forcing_varnames"] = caseinfo["cdr_forcing_varnames"]
+                    build_kwargs["antitracer_year_first"] = caseinfo["antitracer_year_first"]
+                    build_kwargs["antitracer_year_last"] = caseinfo["antitracer_year_last"]
+                    build_kwargs["antitracer_year_align"] = caseinfo["antitracer_year_align"]
+                    build_kwargs["antitracer_tintalgo"] = caseinfo["antitracer_tintalgo"]
+                    build_kwargs["antitracer_taxMode"] = caseinfo["antitracer_taxMode"]
+                    build_kwargs["antitracer_is_alk_list"] = caseinfo["antitracer_is_alk_list"]
+                    build_kwargs["antitracer_coupled_alk_idx_list"] = caseinfo["antitracer_coupled_alk_idx_list"]
 
                 # Call submit_build using the complete dictionary of arguments
                 submit_build(**build_kwargs)
@@ -935,85 +970,6 @@ class global_irf_map:
             self.dask_cluster.shutdown()
             self.dask_cluster = None
 
-    def analyze(self, clobber=False):
-        """perform analysis and generate output datasets"""
-
-        caselist = self.df_case_status.loc[
-            (self.df_case_status.archive)
-        ].index.to_list()
-
-        caselist = list(
-            filter(lambda c: self.df.loc[c].cdr_forcing is not None, caselist)
-        )
-
-        n = 50
-        groups = list(itertools.zip_longest(*(iter(caselist),) * n))
-
-        rows = []
-        for group in groups:
-            caselist_i = [i for i in group if i is not None]
-            zarr_stores_exist = [
-                os.path.exists(self.paths_case(case)["analyze"]) for case in caselist_i
-            ]
-
-            self.dask_cluster = None
-            if not all(zarr_stores_exist) or clobber:
-                self.dask_cluster = machine.dask_cluster()
-
-            for case in tqdm(caselist_i):
-                if "control" in case:
-                    continue
-                zarr_path = self._analyze_case(case, clobber)
-                rows.append(dict(case=case, zarr_path=zarr_path))
-
-            if self.dask_cluster is not None:
-                self.dask_cluster.shutdown()
-                self.dask_cluster = None
-
-        self.df_analysis = pd.DataFrame(rows).set_index("case")
-
-    def visualize(self, clobber=False):
-        """run visualization notebooks"""
-
-        self._refresh_case_status()
-
-        caselist = self.df_case_status.loc[
-            (self.df_case_status.archive)
-        ].index.to_list()
-
-        for case in caselist:
-
-            caseinfo = self.df.loc[case].to_dict()
-            caseinfo["case"] = case
-
-            zarr_store = self.paths_case(case)["validate"]
-            if os.path.exists(zarr_store):
-                nb_out = f"{path_validation_nb_out}/{case}.ipynb"
-                if not os.path.exists(nb_out) or clobber:
-                    print(f"executing: {nb_out}")
-                    pm.execute_notebook(
-                        "_plot_case_validation.ipynb",
-                        nb_out,
-                        parameters=dict(zarr_store=zarr_store),
-                        kernel_name="python3",
-                        engine_name="md_jinja",
-                        jinja_data=caseinfo,
-                    )
-
-            zarr_store = self.paths_case(case)["analyze"]
-            if os.path.exists(zarr_store):
-                nb_out = f"{path_analysis_nb_out}/{case}.ipynb"
-                if not os.path.exists(nb_out) or clobber:
-                    print(f"executing: {nb_out}")
-                    pm.execute_notebook(
-                        "_plot_case_analysis.ipynb",
-                        nb_out,
-                        parameters=dict(zarr_store=zarr_store),
-                        kernel_name="python3",
-                        engine_name="md_jinja",
-                        jinja_data=caseinfo,
-                    )
-
     @property
     def df_case_status(self):
         """
@@ -1054,210 +1010,6 @@ class global_irf_map:
             validate=f"{path_validation_data}/{case}.validation.zarr",
             analyze=f"{path_analysis_data}/{case}.analysis.zarr",
         )
-
-    def _validate_case(self, case, clobber=False, no_load=False):
-        """compute validation dataset and persist as Zarr store"""
-
-        zarr_store = self.paths_case(case)["validate"]
-        if os.path.exists(zarr_store) and not clobber:
-            if no_load:
-                return
-            else:
-                return xr.open_zarr(zarr_store)
-
-        else:
-            caseinfo = self.df.loc[case]
-            is_cdr_run = caseinfo["cdr_forcing"] is not None
-
-            # this stuff should be on a case object or in a DataFrame
-            variable_dict = dict()
-            if is_cdr_run:
-                variable_dict["DIC_ALT_CO2"] = "DIC"
-                variable_dict["ALK_ALT_CO2"] = "ALK"
-                variable_dict["ECOSYS_IFRAC"] = "ECOSYS_IFRAC"
-                variable_dict["FG_ALT_CO2"] = "FG_CO2"
-            else:
-                variable_dict = {v: v for v in self._vars_to_replicate}
-
-            # get case data files
-            files = sorted(
-                glob(
-                    f"{archive_root}/{case}/ocn/hist/{case}.pop.h.[0-9][0-9][0-9][0-9]-[0-9][0-9].nc"
-                )
-            )
-            if not files:
-                print(f"{case}: no files")
-                return
-
-            if is_cdr_run:
-                time_case = self.time_cases[caseinfo["refdate"]]
-            else:
-                time_case = self.time_baseline
-
-            len_time = len(time_case)
-            assert (
-                len(files) == len_time
-            ), f"{case}:\n{len(files)} found -- expected {len_time}"
-
-            # read the data
-            chunk_spec = {"nlat": -1, "nlon": -1, "z_t": 60}
-            ds = xr.open_mfdataset(
-                files,
-                decode_times=False,
-                combine="by_coords",
-                coords="minimal",
-                data_vars="minimal",
-                compat="override",
-                drop_variables=[
-                    "transport_regions",
-                    "transport_components",
-                    "moc_components",
-                ],  # xarray can't merge these for some reason
-                chunks=chunk_spec,
-            )
-
-            # maybe add some variables if this case has them
-            if is_cdr_run:
-                for v in self._vars_to_replicate:
-                    if (
-                        (v in ds)
-                        and (v not in variable_dict.keys())
-                        and (v not in variable_dict.values())
-                    ):
-                        variable_dict[v] = v
-
-            # get the right period of time from the control
-            ndx0 = np.where(time_case[0] == self.time_reference)[0].item()
-            tndx = np.arange(ndx0, ndx0 + len(time_case), 1)
-
-            # loop over variables and compute difference metrics
-            ds_out = xr.Dataset()
-            for v_case, v_ref in variable_dict.items():
-                if v_case not in ds:
-                    print(f"{v_case} not found", end=", ")
-                    continue
-
-                with xr.open_dataset(
-                    self._path_reference_timeseries(v_ref),
-                    decode_times=False,
-                    chunks=chunk_spec,
-                ) as ds_ref:
-                    assert len(ds_ref.time) == len(
-                        self.time_reference
-                    ), "mismatch in control run time axis"
-
-                    # pluck time segment
-                    ds_ref = ds_ref.isel(time=tndx)
-
-                    # identify correct coordinates
-                    if "z_t" in ds_ref[v_ref].dims:
-                        isel_timeseries = dict(z_t=0, nlat=0, nlon=0)
-                        isel_slab = dict(z_t=0, time=-1)
-                        sum_dims = ["z_t", "nlat", "nlon"]
-
-                    elif "z_w_top" in ds_ref[v_ref].dims:
-                        isel_timeseries = dict(z_w_top=9, nlat=0, nlon=0)
-                        isel_slab = dict(z_w_top=9, time=-1)
-                        sum_dims = ["z_w_top", "nlat", "nlon"]
-
-                    elif "z_t_150m" in ds_ref[v_ref].dims:
-                        isel_timeseries = dict(z_t_150m=0, nlat=0, nlon=0)
-                        isel_slab = dict(z_t_150m=0, time=-1)
-                        sum_dims = ["z_t_150m", "nlat", "nlon"]
-                    else:
-                        isel_timeseries = dict(nlat=0, nlon=0)
-                        isel_slab = dict(time=-1)
-                        sum_dims = ["nlat", "nlon"]
-
-                    # initialize variables
-                    n = ds[v_case].isel(time=0).notnull().sum()
-                    ds_out[f"{v_case}_rmse"] = xr.full_like(
-                        ds[v_case].isel(**isel_timeseries), fill_value=np.nan
-                    )
-                    ds_out[f"{v_case}_diff"] = xr.full_like(
-                        ds[v_case].isel(**isel_slab), fill_value=np.nan
-                    )
-
-                    # compute metrics
-                    with xr.set_options(arithmetic_join="exact"):
-                        ds_out[f"{v_case}_rmse"].data = np.sqrt(
-                            ((ds[v_case] - ds_ref[v_ref]) ** 2 / n).sum(sum_dims)
-                        )
-                        ds_out[f"{v_case}_diff"].data = (
-                            ds[v_case] - ds_ref[v_ref]
-                        ).isel(**isel_slab)
-            try:
-                ds_out = ds_out.compute()
-                ds_out.to_zarr(
-                    zarr_store,
-                    mode="w",
-                )                
-            except:
-                print(f"FAILED!\n{case}")
-                
-            return ds_out
-
-    def _analyze_case(self, case, clobber=False):
-        """compute validation dataset and persist as Zarr store"""
-
-        zarr_store = self.paths_case(case)["analyze"]
-        if os.path.exists(zarr_store) and not clobber:
-            return zarr_store
-
-        ds = analysis.open_gx1v7_dataset(case, stream="pop.h")
-        ds_out = analysis.reduction(ds).compute()
-
-        with warnings.catch_warnings(action="ignore"):
-            ds_out.to_zarr(
-                zarr_store,
-                mode="w",
-            )
-
-        return zarr_store
-
-    @property
-    def _vars_to_replicate(self):
-        return [
-            "TEMP",
-            "SALT",
-            "UVEL",
-            "VVEL",
-            "WVEL",
-            "PO4",
-            "NO3",
-            "SiO3",
-            "NH4",
-            "Fe",
-            "Lig",
-            "O2",
-            "DIC",
-            "DIC_ALT_CO2",
-            "ALK",
-            "ALK_ALT_CO2",
-            "DOC",
-            "DON",
-            "DOP",
-            "DOPr",
-            "DONr",
-            "DOCr",
-            "zooC",
-            "spChl",
-            "spC",
-            "spP",
-            "spFe",
-            "spCaCO3",
-            "diatChl",
-            "diatC",
-            "diatP",
-            "diatFe",
-            "diatSi",
-            "diazChl",
-            "diazC",
-            "diazP",
-            "diazFe",
-            "ECOSYS_IFRAC",
-            "FG_ALT_CO2",
-        ]
 
 
 @click.command()

@@ -33,11 +33,22 @@ def create_smyle_clone(
     beta_year_first=1998,
     beta_year_last=2020,
     beta_year_align=347,
+    beta_tintalgo="linear",
+    beta_taxMode="cycle",
     eta_file=None,
     eta_varname="dDICdALK",
     eta_year_first=1998,
     eta_year_last=2020,
     eta_year_align=347,
+    eta_tintalgo="linear",
+    eta_taxMode="cycle",
+    antitracer_year_first=1999,
+    antitracer_year_last=2019,
+    antitracer_year_align=347,
+    antitracer_tintalgo="linear",
+    antitracer_taxMode="cycle",
+    antitracer_is_alk_list=None,
+    antitracer_coupled_alk_idx_list=None,
     antitracer_master_indices=None,
     clobber=False,
     curtail_output=True,
@@ -45,9 +56,8 @@ def create_smyle_clone(
     #stop_n=16, # control
     stop_option="nyear",
     wallclock="48:00:00",
-    #resubmit=14, # antitracer
-    #resubmit=1,
-    resubmit=0,
+    resubmit=14, # antitracer
+    #resubmit=0,
     #resubmit=0, # control
 ):
 
@@ -446,18 +456,30 @@ def create_smyle_clone(
 
         # --- Generate namelist entries ---
         for i, (fpath, varname, master_idx) in enumerate(zip(cdr_forcing_files, cdr_forcing_varnames, antitracer_master_indices)):
-            idx = i + 1 # Fortran 1-based index
-            
+            idx = i + 1  # Fortran 1-based index
+
             padded_master_idx = f"{master_idx:03d}"
-            
-            # Use the padded index in the namelist entry
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%name = 'ANTITRACER{padded_master_idx}'")
+
+            is_alk = antitracer_is_alk_list[i] if antitracer_is_alk_list is not None else False
+            tracer_prefix = "DELTAALK" if is_alk else "DELTADIC"
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%name = '{tracer_prefix}{padded_master_idx}'")
             antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%file = '{fpath}'")
             antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%varname = '{varname}'")
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_first = 1999")
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_last = 2019")
-            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_align = 347")
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_first = {antitracer_year_first}")
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_last = {antitracer_year_last}")
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%year_align = {antitracer_year_align}")
             antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%scale_factor = 1.0e5")
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%tintalgo = '{antitracer_tintalgo}'")
+            antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%taxMode = '{antitracer_taxMode}'")
+
+            if antitracer_is_alk_list is not None:
+                is_alk_str = ".true." if antitracer_is_alk_list[i] else ".false."
+                antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%is_alk_only = {is_alk_str}")
+
+            if antitracer_coupled_alk_idx_list is not None:
+                coupled_idx = antitracer_coupled_alk_idx_list[i]
+                if coupled_idx > 0:
+                    antitracer_nl_entries.append(f"  antitracer_forcing_nml_array({idx})%coupled_alk_idx = {coupled_idx}")
 
 
         antitracer_nl_str = "\n".join(antitracer_nl_entries)
@@ -468,6 +490,8 @@ def create_smyle_clone(
           beta_forcing_nml%year_first = {beta_year_first}
           beta_forcing_nml%year_last = {beta_year_last}
           beta_forcing_nml%year_align = {beta_year_align}
+          beta_forcing_nml%tintalgo = '{beta_tintalgo}'
+          beta_forcing_nml%taxMode = '{beta_taxMode}'
         """)
 
         eta_nl_str = textwrap.dedent(f"""
@@ -476,6 +500,8 @@ def create_smyle_clone(
           eta_forcing_nml%year_first = {eta_year_first}
           eta_forcing_nml%year_last = {eta_year_last}
           eta_forcing_nml%year_align = {eta_year_align}
+          eta_forcing_nml%tintalgo = '{eta_tintalgo}'
+          eta_forcing_nml%taxMode = '{eta_taxMode}'
         """)
 
         pop_nl_content = textwrap.dedent(f"""\
@@ -493,14 +519,19 @@ def create_smyle_clone(
 
         user_nl["pop"] = user_nl["pop"] + "\n" + pop_nl_content.strip()
 
-        # Write the antitracer_indices.txt file
-        indices_filepath = f"{caseroot}/antitracer_indices.txt"
+        # Write per-type index files used by ocn.antitracer.tavg.csh
+        is_alk = antitracer_is_alk_list or [False] * n_tracers
+        dic_indices = [midx for midx, alk in zip(antitracer_master_indices, is_alk) if not alk]
+        alk_indices = [midx for midx, alk in zip(antitracer_master_indices, is_alk) if alk]
 
-        # This print statement will appear in your build log
-        print(f"INFO: Writing antitracer indices to {indices_filepath}")
-
-        with open(indices_filepath, "w") as f:
-            f.write(" ".join(map(str, antitracer_master_indices)))
+        for fname, indices in [
+            ("antitracer_indices_dic.txt", dic_indices),
+            ("antitracer_indices_alk.txt", alk_indices),
+        ]:
+            fpath = f"{caseroot}/{fname}"
+            print(f"INFO: Writing antitracer indices to {fpath}")
+            with open(fpath, "w") as f:
+                f.write(" ".join(map(str, indices)))
 
     for key, nl in user_nl.items():
         user_nl_file = f"{caseroot}/user_nl_{key}"
