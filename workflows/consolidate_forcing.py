@@ -49,8 +49,8 @@ outfile = "/global/cfs/projectdirs/m4746/Projects/OAE-Efficiency-Map/data/defici
 print("Creating output skeleton:", outfile)
 
 ds0 = xr.open_dataset(files[0])
-# keep grid fields & KMT only
-skeleton = ds0[["KMT"]]
+# keep grid fields & KMT, TAREA only
+skeleton = ds0[["KMT", "TAREA"]]
 skeleton.to_netcdf(outfile, mode="w")
 ds0.close()
 
