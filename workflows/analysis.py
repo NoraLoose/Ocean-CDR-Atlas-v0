@@ -1,211 +1,264 @@
-import os
-from glob import glob
+#!/usr/bin/env python
+# coding: utf-8
 
-import cftime
+import numpy as np
 import xarray as xr
+import cftime
+import glob
 
-import pop_tools
+# -----------------------------
+# Polygon maps
+# -----------------------------
+BASINS = [
+    "North_Atlantic_basin",
+    "North_Pacific_basin",
+    "South",
+    "Southern_Ocean",
+]
 
-from config import paths, machine_name, project_name
+NPOLYGON = {
+    "North_Atlantic_basin": 150,
+    "North_Pacific_basin": 200,
+    "South": 300,
+    "Southern_Ocean": 40,
+}
 
+# Forward and inverse maps
+POLYGON_MASTER_MAP = {}  # (basin, polygon) → index
+INVERSE_POLYGON_MAP = {}  # index → (basin, polygon)
+idx = 0
+for b in BASINS:
+    for p in range(NPOLYGON[b]):
+        POLYGON_MASTER_MAP[(b, p)] = idx
+        INVERSE_POLYGON_MAP[idx] = (b, p)
+        idx += 1
 
-nmolcm2s_to_molm2yr = 1.0e-9 * 1.0e4 * 86400.0 * 365.0
-nmolcm2_to_molm2 = 1.0e-9 * 1.0e4
+# -----------------------------
+# Time utilities
+# -----------------------------
+def _time_dim(ds):
+    """Return the name of the time dimension ('time' or 'elapsed_time')."""
+    if "time" in ds.dims:
+        return "time"
+    if "elapsed_time" in ds.dims:
+        return "elapsed_time"
+    raise ValueError("Dataset has neither 'time' nor 'elapsed_time' dimension")
 
+def compute_dt_seconds(ds):
+    """Return time step length in seconds for each time index."""
+    tdim = _time_dim(ds)
+    dt = ds.time_bound.isel(d2=1).squeeze() - ds.time_bound.isel(d2=0).squeeze()
+    dt_seconds = np.array([d.total_seconds() for d in dt.values])
+    return xr.DataArray(dt_seconds, dims=tdim)
 
-def _list_hist_files(case, stream):
-    """list history files"""
-    archive_root = f"{paths['data']}/archive/{case}"
-    if stream == "pop.h":
-        subdir = "ocn/hist"
-        datestr_glob = "????-??"
-    elif stream == "pop.h.ecosys.nday1":
-        subdir = "ocn/hist"
-        datestr_glob = "????-??-??"
-        rename_underscore2_vars = True
-    else:
-        raise ValueError(f"access to stream: '{stream}' not defined")
+def compute_elapsed_days(ds):
+    """
+    Compute elapsed days relative to one month before the first time in ds.time.
+    
+    Parameters
+    ----------
+    ds : xarray.Dataset or xarray.DataArray
+        Must have a 'time' coordinate (cftime or datetime).
+    
+    Returns
+    -------
+    xarray.DataArray
+        Elapsed days coordinate.
+    """
+    # First time in the dataset
+    t0 = ds.time.squeeze().values[0]
 
-    glob_str = f"{archive_root}/{subdir}/{case}.{stream}.{datestr_glob}.nc"
-    files = sorted(glob(glob_str))
-    assert files, f"no files found.\nglob string: {glob_str}"
-    return files
+    # Only works with cftime.DatetimeNoLeap
+    if not isinstance(t0, cftime.DatetimeNoLeap):
+        raise ValueError("ds.time must be cftime.DatetimeNoLeap for this function.")
 
+    # Subtract one month safely
+    month = t0.month - 1
+    year = t0.year
+    if month == 0:
+        month = 12
+        year -= 1
+    # Use day=1, safe for all months
+    start = cftime.DatetimeNoLeap(year, month, 1)
 
-def open_gx1v7_dataset(case, stream="pop.h"):
-    """access data from a case"""
-    grid = pop_tools.get_grid("POP_gx1v7")
-    files = _list_hist_files(case, stream)
+    # Compute elapsed days
+    elapsed = np.array([(t - start).days for t in ds.time.squeeze().values])
 
-    rename_underscore2_vars = True if stream == "pop.h.ecosys.nday1" else False
+    return xr.DataArray(elapsed, dims=_time_dim(ds), attrs={"units": "days"})
 
-    def preprocess(ds):
-        return ds.set_coords(["KMT", "TAREA"]).reset_coords(
-            ["ULONG", "ULAT"], drop=True
-        )
+def finalize(arr, ds):
+    """Attach elapsed_time coordinate and return cleaned DataArray."""
+    elapsed_days = compute_elapsed_days(ds)
+    return arr.assign_coords(elapsed_time=elapsed_days)
 
-    ds = xr.open_mfdataset(
-        files,
-        coords="minimal",
-        combine="by_coords",
-        compat="override",
-        data_vars="minimal",
-        preprocess=preprocess,
-        decode_times=False,
-        chunks={"time": 1},
+# -----------------------------
+# Experiment paths and dataset loaders
+# -----------------------------
+def dor_experiment_paths(
+    polygon_id,
+    intervention_month="01",
+    intervention_year="1999",
+    realization="001",
+):
+    """Return (subdir, file_glob) for true CESM-MARBL experiment."""
+    base_path = "/global/cfs/projectdirs/m4746/Projects/Ocean-CDR-Atlas-v0/data/archive"
+
+    b, p = INVERSE_POLYGON_MAP[int(polygon_id)]
+    multiplier = f"{int(polygon_id) * 4:05d}"
+
+    subdir = (
+        f"smyle.cdr-atlas-v0.glb-dor_"
+        f"{b}_{p:03d}_{intervention_year}-{intervention_month}-01_"
+        f"{multiplier}.{realization}"
     )
 
-    # fix time
-    tb_var = ds.time.attrs["bounds"]
-    time_units = ds.time.units
-    calendar = ds.time.calendar
+    file_glob = f"{base_path}/{subdir}/ocn/hist/*.pop.h.*.nc"
 
-    ds["time"] = cftime.num2date(
-        ds[tb_var].mean("d2"),
-        units=time_units,
-        calendar=calendar,
+    return subdir, file_glob
+
+def oae_experiment_paths(
+    polygon_id,
+    intervention_month="01",
+    intervention_year="1999",
+    realization="001",
+):
+    """Return (subdir, file_glob) for true CESM-MARBL experiment."""
+    base_path = "/pscratch/sd/m/mattlong/atlas_cache/experiments/"
+
+    b, p = INVERSE_POLYGON_MAP[int(polygon_id)]
+    multiplier = f"{int(polygon_id) * 4:05d}"
+
+    subdir = (
+        f"smyle.cdr-atlas-v0.glb-oae_"
+        f"{b}_{p:03d}_{intervention_year}-{intervention_month}-01_"
+        f"{multiplier}.{realization}"
     )
-    ds.time.encoding.update(
-        dict(
-            calendar=calendar,
-            units=time_units,
-        )
+
+    file_glob = f"{base_path}/{polygon_id}/{intervention_month}/alk-forcing.{polygon_id}-{intervention_year}-{intervention_month}.pop.h.*.nc"
+
+    return subdir, file_glob
+    
+def deficit_tracer_experiment_paths(
+    suffix,
+    intervention_month="01",
+    intervention_year="1999",
+    realization="001",
+):
+    """Return (subdir, file_glob) for deficit tracer experiment."""
+    base_path = (
+        "/global/cfs/cdirs/m4746/Users/nora/"
+        "Ocean-CDR-Atlas-v0/data/archive"
     )
 
-    # add ∆t
-    d2 = ds[tb_var].dims[-1]
-    ds["time_delta"] = ds[tb_var].diff(d2).squeeze()
-    ds = ds.set_coords("time_delta")
-    ds.time_delta.attrs["long_name"] = "∆t"
-    ds.time_delta.attrs["units"] = "days"
-
-    # replace coords to account for land-block elimination
-    ds["TLONG"] = grid.TLONG
-    ds["TLAT"] = grid.TLAT
-    ds["KMT"] = ds.KMT.fillna(0)
-
-    # add area field
-    ds["area_m2"] = ds.TAREA * 1e-4
-    ds.area_m2.encoding = dict(**ds.TAREA.encoding)
-    ds.area_m2.attrs = dict(**ds.TAREA.attrs)
-    ds.area_m2.attrs["units"] = "m^2"
-
-    if rename_underscore2_vars:
-        rename_dict = dict()
-        for v in ds.data_vars:
-            if v[-2:] == "_2":
-                rename_dict[v] = v[:-2]
-        ds = ds.rename(rename_dict)
-
-    return ds
-
-
-def reduction(ds):
-
-    # time_delta in days, convert to years
-    dt = ds.time_delta / 365
-
-    with xr.set_options(keep_attrs=True):
-
-        # air-sea CO2 flux
-        fg_co2_add = (-1.0) * (ds.FG_CO2 - ds.FG_ALT_CO2).where(ds.KMT > 0)
-        fg_co2_add *= nmolcm2s_to_molm2yr
-        fg_co2_add.attrs["units"] = "mol m$^{-2}$ yr$^{-1}$"
-
-        alk_flux = (
-            compute_global_ts(ds.ALK_FLUX * nmolcm2s_to_molm2yr, ds.area_m2) * dt
-        ).cumsum("time")
-        alk_flux.attrs["units"] = "mol"
-
-        dic_flux = (
-            compute_global_ts(ds.DIC_FLUX * nmolcm2s_to_molm2yr, ds.area_m2) * dt
-        ).cumsum("time")
-        dic_flux.attrs["units"] = "mol"
-
-        alk_flux_total = (
-            (ds.ALK_FLUX * nmolcm2s_to_molm2yr * dt).sum("time").where(ds.KMT > 0)
-        )
-        alk_flux_total.attrs["units"] = "mol m$^{-2}$"
-
-        dic_flux_total = (
-            (ds.DIC_FLUX * nmolcm2s_to_molm2yr * dt).sum("time").where(ds.KMT > 0)
-        )
-        dic_flux_total.attrs["units"] = "mol m$^{-2}$"
-
-        dic_add = (-1.0) * (compute_global_ts(fg_co2_add, ds.area_m2) * dt).cumsum(
-            "time"
-        )
-        dic_add.attrs["long_name"] = "Change in DIC inventory"
-        dic_add.attrs["units"] = dic_add.attrs["units"].replace("yr$^{-1}$", "").strip()
-
-        dic_surf = ds.DIC.isel(z_t=0)
-        alk_surf = ds.ALK.isel(z_t=0)
-        dic_add_surf = ds.DIC.isel(z_t=0) - ds.DIC_ALT_CO2.isel(z_t=0)
-        alk_add_surf = ds.ALK.isel(z_t=0) - ds.ALK_ALT_CO2.isel(z_t=0)
-
-        pH_add_surf = ds.PH - ds.PH_ALT_CO2
-        pco2_add_surf = ds.pCO2SURF - ds.pCO2SURF_ALT_CO2
-
-    dso = (
-        xr.Dataset(
-            dict(
-                AREA_M2=ds.area_m2,
-                FG_CO2_ADD=fg_co2_add,
-                DIC_ADD_TOTAL=dic_add,
-                ALK_FLUX=alk_flux,
-                DIC_FLUX=dic_flux,
-                ALK_FLUX_TOTAL=alk_flux_total,
-                DIC_FLUX_TOTAL=dic_flux_total,
-                DIC_SURF=dic_surf,
-                ALK_SURF=alk_surf,
-                DIC_ADD_SURF=dic_add_surf,
-                ALK_ADD_SURF=alk_add_surf,
-                PH_ADD_SURF=pH_add_surf,
-                pCO2_ADD_SURF=pco2_add_surf,
-            )
-        )
-        .drop_vars(["TAREA", "z_t"])
-        .set_coords(["AREA_M2"])
+    subdir = (
+        f"smyle.cdr-atlas-v0.glb-antitracer_"
+        f"{intervention_year}-{intervention_month}_{suffix}.{realization}"
     )
-    dso.attrs["case"] = ds.title
-    return dso
+
+    file_glob = (
+        f"{base_path}/{subdir}/ocn/hist/"
+        f"smyle.cdr-atlas-v0.glb-antitracer_"
+        f"{intervention_year}-{intervention_month}_{suffix}.{realization}"
+        ".pop.h.*.nc"
+    )
+
+    return subdir, file_glob
+
+MODES = {
+    "dor": dor_experiment_paths,
+    "oae": oae_experiment_paths,
+}
+
+def open_true_experiment(*args, mode, first_file=False, **kwargs):
+
+    experiment_paths = MODES[mode]
+
+    _, path = experiment_paths(*args, **kwargs)
+
+    
+    if first_file:
+        files = sorted(glob.glob(path))
+        if not files:
+            raise FileNotFoundError(f"No files match: {path}")
+        return xr.open_dataset(files[0], decode_timedelta=False)
+        
+    return xr.open_mfdataset(path, decode_timedelta=False)
 
 
-def compute_additional_CO2_flux(ds):
-    """compute the additional CO2 flux"""
-    with xr.set_options(keep_attrs=True):
-        flux_effect = (-1.0) * (ds.FG_CO2 - ds.FG_ALT_CO2).where(ds.KMT > 0)
-        flux_effect *= nmolcm2s_to_molm2yr
-        flux_effect.attrs["units"] = "mol m$^{-2}$ yr$^{-1}$"
-        flux_effect.attrs["sign_convention"] = "postive up"
-        flux_effect["area_m2"] = ds.TAREA * 1e-4
-    return flux_effect
+def open_deficit_tracer_experiment(*args, first_file=False, **kwargs):
+    _, path = deficit_tracer_experiment_paths(*args, **kwargs)
+
+    if first_file:
+        files = sorted(glob.glob(path))
+        if not files:
+            raise FileNotFoundError(f"No files match: {path}")
+        return xr.open_dataset(files[0], decode_timedelta=False)
+    return xr.open_mfdataset(path, decode_timedelta=False)
+
+analysis_base = (
+    "/global/cfs/projectdirs/m4746/Users/nora/"
+    "Ocean-CDR-Atlas-v0/data/analysis"
+)
 
 
-def compute_time_cumulative_integral(da, convert_time=1.0):
-    """integrate a DataArray in time"""
-    with xr.set_options(keep_attrs=True):
-        dao = da.weighted(da.time_delta * convert_time).sum("time")
-    dao.attrs["units"] = dao.attrs["units"].replace("yr$^{-1}$", "")
-    return dao
+def open_true_curve(
+    pid,
+    mode,
+    intervention_month="01",
+    intervention_year="1999",
+    realization="001",
+):
+
+    experiment_paths = MODES[mode]
+        
+    subdir, _ = experiment_paths(
+        pid,
+        intervention_month=intervention_month,
+        intervention_year=intervention_year,
+        realization=realization,
+    )
+
+    output_file = f"{analysis_base}/{subdir}/integrated.nc"
+    return xr.open_dataset(output_file, decode_timedelta=False)
 
 
-def compute_global_ts(da, area_m2):
-    """integrate DataArray globally"""
-    with xr.set_options(keep_attrs=True):
-        dao = (da * area_m2).sum(["nlat", "nlon"])
-    dao.attrs["units"] = dao.attrs["units"].replace("m$^{-2}$", "")
-    return dao
+def open_deficit_tracer_curve(
+    pid,
+    suffix,
+    intervention_month="01",
+    intervention_year="1999",
+    realization="001",
+):
+    subdir, _ = deficit_tracer_experiment_paths(
+        suffix,
+        intervention_month=intervention_month,
+        intervention_year=intervention_year,
+        realization=realization,
+    )
 
+    output_file = f"{analysis_base}/{subdir}/integrated_{pid}.nc"
+    return xr.open_dataset(output_file, decode_timedelta=False)
 
-def compute_additional_DIC_global_ts(ds):
-    """return the globally-integrated, time-integrated flux"""
+# ------------------
+# Flux computations
+# -----------------------------
+def compute_forcing(ds, flux, cumulative=True):
+    """Compute DIC forcing integrated over time."""
+    dt = compute_dt_seconds(ds)
+    forcing = ds[flux] * dt # nmol/cm^2/s * s = nmol/cm^2
+    if cumulative:
+        forcing = forcing.cumsum(_time_dim(ds))
+    return forcing.where(ds.KMT > 0)
 
-    add_co2_ts = compute_global_ts(compute_additional_CO2_flux(ds))
+def compute_air_sea_flux(ds, flux1, flux2, cumulative=True):
+    """Compute change in DIC inventory from two flux variables."""
+    dt = compute_dt_seconds(ds)
+    delta_dic = (ds[flux1] - ds[flux2]) * dt # mmol/m^3 cm/s * s = mmol/m^3 cm
+    if cumulative:
+        delta_dic = delta_dic.cumsum(_time_dim(ds))
+    return delta_dic.where(ds.KMT > 0)
 
-    # compute cumulative integral in time
-    dt = add_co2_ts.time_delta / 365  # time_delta in days, convert to years
-    with xr.set_options(keep_attrs=True):
-        dao = (-1.0) * (add_co2_ts * dt).cumsum("time")
-    dao.attrs["long_name"] = "Change in DIC inventory"
-    dao.attrs["units"] = dao.attrs["units"].replace("yr$^{-1}$", "").strip()
+def compute_spatial_integral(da, ds):
+    """Spatially integrate a DataArray over the ocean grid."""
+    return (da * ds.TAREA).sum(["nlat", "nlon"])
+
