@@ -132,4 +132,5 @@ dmypy.json
 
 # jupyter-book build directory
 workflows/_build/
+workflows/output
 .DS_Store
