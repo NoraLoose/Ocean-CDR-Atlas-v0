@@ -22,7 +22,7 @@ you `import config` (which `atlas.py`/`cesm.py` do), `workflows/config.py` clone
 `codes/cesm2.2.0` and checks out `anti-tracer` automatically if it isn't already there. You do
 need SSH access to that GitHub repo for the clone to succeed.
 
-## Running an antitracer experiment (`workflows/01` – `07`)
+## Running CDR tracer experiments (`workflows/01` – `07`)
 
 Run these in order. Notebooks are run top-to-bottom in Jupyter; `.sh` scripts are submitted with
 `sbatch` from inside `workflows/`.
@@ -91,15 +91,18 @@ Steps 1–7 as shipped only cover the basins/polygons/dates already baked into t
 a new location, or a period outside what's already been computed, you need to do some of the
 following before/inside step 3:
 
-1. **Make a forcing file.** Every experiment in the YAML needs a per-polygon forcing NetCDF —
-   see `alk_forcing_file()` in `03-make-yamls.ipynb`, which expects files named
-   `alk-forcing-<basin>.<polygon>-<date>.nc` under
-   `.../OAE-Efficiency-Map/data/alk-forcing/OAE-Efficiency-Map/`, each holding a time-varying
-   `alk_forcing` field on the POP grid (plus `KMT`/`TAREA`, see `consolidate_forcing.py`). The
-   same file/variable is reused for both OAE (`is_alk=True`, applied as an alkalinity source) and
-   DOR (`is_alk=False`, applied as a DIC sink) — `is_alk` in the YAML controls how it's used, not
-   the file itself. Generating this file for a new basin/polygon isn't done anywhere in this repo
-   — that's produced upstream, in the companion OAE-Efficiency-Map forcing pipeline.
+1. **Make a forcing file.** Each experiment in the YAML has its own `forcing_file`/`varname`
+   pair, written straight into a per-tracer namelist entry (`cesm.py` ~line 458) — there's no
+   requirement that every polygon/tracer point at a distinct file, or that the variable be named
+   `alk_forcing`. That's just the convention `03-make-yamls.ipynb`'s `alk_forcing_file()` and
+   `consolidate_forcing.py` happen to follow (one file per basin/polygon, named
+   `alk-forcing-<basin>.<polygon>-<date>.nc`, variable `alk_forcing`, plus grid fields `KMT`/
+   `TAREA`). Pointing several experiments at the same file/varname, or splitting one polygon's
+   forcing across a few files, should work too (untested) — just set `forcing_file`/`varname`
+   accordingly for each experiment entry in the YAML. `is_alk` controls how a tracer is applied
+   (OAE alkalinity source vs. DOR DIC sink), independent of the file/variable naming. Generating
+   forcing data for a new basin/polygon isn't done anywhere in this repo — that's produced
+   upstream, in the companion OAE-Efficiency-Map forcing pipeline.
 
 2. **Make sure your β/η (carbonate-sensitivity) file covers your run period.** The YAML's
    `beta_forcing`/`eta_forcing` blocks point at `carbonate_sensitivity_daily.nc` from step 2,
