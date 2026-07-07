@@ -39,3 +39,4 @@ dependencies:
 - zarr
 - s3fs
 - h5netcdf
+- roms-tools
