@@ -202,6 +202,14 @@ OUTPUT_FILE = (
 )
 
 print(f"Writing {OUTPUT_FILE}")
-ds_out.to_netcdf(OUTPUT_FILE)
+ds_out.to_netcdf(
+    OUTPUT_FILE,
+    encoding={
+        "time": {
+            "units": "days since 0001-01-01 00:00:00",
+            "calendar": "noleap",
+        }
+    },
+)
 
 print("Done.")
